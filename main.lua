@@ -45,7 +45,8 @@ while true do
       ["textDocument/hover"] = function()
         local current_line = request.params.position.line
         local current_char = request.params.position.character
-        server.hover(current_file, current_line, current_char)
+
+        server.hover(request.id, current_file, current_line, current_char)
       end,
       ["shutdown"] = function()
         server.shutdown()

@@ -19,8 +19,21 @@ function response.initialize(request_id)
       version = "0.0.1",
     },
   }
-  logger.log(json.encode(intilaize_response))
   return json.encode(intilaize_response)
+end
+
+---@param request_id integer
+---@param content string
+function response.hover(request_id, content)
+  assert(type(content) == "string")
+  local hover_response = {
+    jsonrpc = "2.0",
+    id = request_id,
+    result = {
+      contents = content,
+    },
+  }
+  return json.encode(hover_response)
 end
 
 function response.shutdown()
