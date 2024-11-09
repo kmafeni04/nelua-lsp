@@ -25,10 +25,6 @@ return function(current_file, current_file_path)
     end, function(e)
       e.message = context:get_visiting_traceback(1) .. e:get_message()
     end)
-    -- for k, v in pairs(context.context.context) do
-    --   logger.log(tostring(k) .. "  k")
-    --   logger.log(tostring(v) .. "  v")
-    -- end
   end)
   if not ok then
     ast = nil

@@ -14,6 +14,7 @@ function response.initialize(request_id)
       capabilities = {
         textDocumentSync = 1,
         hoverProvider = true,
+        definitionProvider = true,
       },
     },
     serverInfo = {
@@ -28,7 +29,6 @@ end
 ---@param content string
 ---@return string?
 function response.hover(request_id, content)
-  assert(type(content) == "string", "content must be a string")
   local hover_response = {
     jsonrpc = "2.0",
     id = request_id,
@@ -37,6 +37,31 @@ function response.hover(request_id, content)
     },
   }
   return json.encode(hover_response)
+end
+
+---@class Position
+---@field line integer
+---@field character integer
+
+---@class Range
+---@field start Position
+---@field end Position
+
+---@class Loc
+---@field uri string
+---@field range Range
+
+---@param request_id integer
+---@param locs? Loc[]
+function response.definition(request_id, locs)
+  local definition_response = {
+    jsonrpc = "2.0",
+    id = request_id,
+    result = locs or {},
+    error = "No definition found",
+  }
+
+  return json.encode(definition_response)
 end
 
 ---@return string?

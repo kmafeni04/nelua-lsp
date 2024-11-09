@@ -32,7 +32,6 @@ function notification.diagnostic(current_uri, line, start_char, end_char, severi
   if clear then
     diagnostic_response.params.diagnostics[1] = nil
   end
-  logger.log(json.encode(diagnostic_response))
   return json.encode(diagnostic_response)
 end
 

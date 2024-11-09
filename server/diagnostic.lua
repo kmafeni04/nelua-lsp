@@ -86,7 +86,6 @@ end
 ---@param current_file string
 ---@param current_file_path string
 ---@param current_uri string
----@return boolean
 return function(documents, current_file, current_file_path, current_uri)
   local parse_err = false
   current_file = current_file or documents[current_uri]
@@ -106,7 +105,6 @@ return function(documents, current_file, current_file_path, current_uri)
       io.write(diagnostic)
       io.flush()
       parse_err = true
-      return parse_err
     elseif err.message:match(":%s*syntax error:") then
       local diag = create_diagnostic(err.message, "(.-):(%d+):(%d+):%s+syntax error:%s+([^\r\n]+)", Severity.Error)
       local diagnostic =
@@ -115,13 +113,10 @@ return function(documents, current_file, current_file_path, current_uri)
       io.write(diagnostic)
       io.flush()
       parse_err = true
-      return parse_err
     end
   else
     local diagnostic = notification.diagnostic(current_uri, 0, 0, 0, 0, "", true)
     io.write(diagnostic)
     io.flush()
-    return parse_err
   end
-  return parse_err
 end
