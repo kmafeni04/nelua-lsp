@@ -45,6 +45,9 @@ while true do
         current_file = server.did_open(current_file_path)
         documents[current_uri] = current_file
       end,
+      ["textDocument/didChange"] = function()
+        current_file = server.did_change(documents, request.params, current_uri)
+      end,
       ["textDocument/hover"] = function()
         local current_line = request.params.position.line
         local current_char = request.params.position.character

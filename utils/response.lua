@@ -11,6 +11,7 @@ function response.initialize(request_id)
     id = request_id,
     result = {
       capabilities = {
+        textDocumentSync = 1,
         hoverProvider = true,
       },
     },

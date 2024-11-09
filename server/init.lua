@@ -2,6 +2,7 @@ local logger = require("utils.logger")
 
 local initialize = require("server.initialize")
 local did_open = require("server.did_open")
+local did_change = require("server.did_change")
 local hover = require("server.hover")
 local shutdown = require("server.shutdown")
 local server = {}
@@ -16,6 +17,13 @@ function server.did_open(current_file_path)
   return did_open(current_file_path)
 end
 
+---@param documents table<string, string>
+---@param request_params table
+---@param current_uri string
+---@return string
+function server.did_change(documents, request_params, current_uri)
+  return did_change(documents, request_params, current_uri)
+end
 ---@param request_id integer
 ---@param documents table<string, string>
 ---@param current_uri string
