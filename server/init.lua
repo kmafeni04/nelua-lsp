@@ -2,6 +2,7 @@ local logger = require("utils.logger")
 
 local initialize = require("server.initialize")
 local did_open = require("server.did_open")
+local diagnostic = require("server.diagnostic")
 local did_change = require("server.did_change")
 local hover = require("server.hover")
 local shutdown = require("server.shutdown")
@@ -15,6 +16,15 @@ end
 ---@param current_file_path string
 function server.did_open(current_file_path)
   return did_open(current_file_path)
+end
+
+---@param documents table<string, string>
+---@param current_file string
+---@param current_file_path string
+---@param current_uri string
+---@return boolean
+function server.diagnostic(documents, current_file, current_file_path, current_uri)
+  return diagnostic(documents, current_file, current_file_path, current_uri)
 end
 
 ---@param documents table<string, string>

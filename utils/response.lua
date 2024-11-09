@@ -5,6 +5,7 @@ local json = require("utils.json")
 local response = {}
 
 ---@param request_id integer
+---@return string?
 function response.initialize(request_id)
   local intilaize_response = {
     jsonrpc = "2.0",
@@ -25,6 +26,7 @@ end
 
 ---@param request_id integer
 ---@param content string
+---@return string?
 function response.hover(request_id, content)
   assert(type(content) == "string", "content must be a string")
   local hover_response = {
@@ -37,6 +39,7 @@ function response.hover(request_id, content)
   return json.encode(hover_response)
 end
 
+---@return string?
 function response.shutdown()
   local shutdown_response = { result = {} }
   return json.encode(shutdown_response)

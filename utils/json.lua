@@ -1,4 +1,5 @@
 local rxi_json = require("lib.rxi_json")
+local logger = require("utils.logger")
 
 local json = {}
 

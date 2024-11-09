@@ -1,11 +1,6 @@
-local except = require("nelua.utils.except")
-local analyzer = require("nelua.analyzer")
 local sstream = require("nelua.utils.sstream")
-local typedefs = require("nelua.typedefs")
-local AnalyzerContext = require("nelua.analyzercontext")
-local aster = require("nelua.aster")
-local generator = require("nelua.cgenerator")
 
+local analyze_ast = require("utils.analyze_ast")
 local logger = require("utils.logger")
 local response = require("utils.response")
 
@@ -29,6 +24,7 @@ end
 ---@param node table
 ---@param pos integer
 ---@param foundnodes table
+---@return table?
 local function find_nodes_by_pos(node, pos, foundnodes)
   if type(node) ~= "table" then
     return
@@ -39,6 +35,7 @@ local function find_nodes_by_pos(node, pos, foundnodes)
   for i = 1, node.nargs or #node do
     find_nodes_by_pos(node[i], pos, foundnodes)
   end
+  return foundnodes
 end
 
 ---@param request_id integer
@@ -51,28 +48,13 @@ end
 return function(request_id, documents, current_uri, current_file, current_file_path, current_line, current_char)
   current_file = current_file or documents[current_uri]
   local content = ""
-  ---@type table
-  local ast
-  local ok, err = except.trycall(function()
-    ast = aster.parse(current_file, current_file_path)
-    logger.log(current_file_path)
-    local context = AnalyzerContext(analyzer.visitors, ast, generator)
-    except.try(function()
-      for _, v in pairs(typedefs.primtypes) do
-        if v.metafields then
-          v.metafields = {}
-        end
-      end
-
-      context = analyzer.analyze(context)
-    end)
-  end)
-  if ok then
+  local ast, err = analyze_ast(current_file, current_file_path)
+  if ast then
     local ss = sstream()
     local pos = find_pos(current_file, current_line, current_char)
-    local found_nodes = {}
-    find_nodes_by_pos(ast, pos, found_nodes)
-    local lastnode = found_nodes[#found_nodes]
+
+    local found_nodes = find_nodes_by_pos(ast, pos, {})
+    local lastnode = assert(found_nodes)[#found_nodes]
 
     -- for k, v in pairs(lastnode) do
     --   logger.log(tostring(k) .. "  k")

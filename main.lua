@@ -11,6 +11,7 @@ local documents = {}
 local current_uri = ""
 local current_file = ""
 local current_file_path = ""
+local parse_err = false
 ---@type string
 local root_path = io.popen("git rev-parse --show-toplevel 2>&1"):read("l")
 
@@ -44,9 +45,15 @@ while true do
         assert(current_uri == "file://" .. current_file_path, "current_uri does not match current file path")
         current_file = server.did_open(current_file_path)
         documents[current_uri] = current_file
+
+        parse_err = server.diagnostic(documents, current_file, current_file_path, current_uri)
       end,
       ["textDocument/didChange"] = function()
         current_file = server.did_change(documents, request.params, current_uri)
+        parse_err = server.diagnostic(documents, current_file, current_file_path, current_uri)
+      end,
+      ["textDocument/didSave"] = function()
+        parse_err = server.diagnostic(documents, current_file, current_file_path, current_uri)
       end,
       ["textDocument/hover"] = function()
         local current_line = request.params.position.line
