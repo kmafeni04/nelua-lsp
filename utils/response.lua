@@ -25,7 +25,7 @@ end
 ---@param request_id integer
 ---@param content string
 function response.hover(request_id, content)
-  assert(type(content) == "string")
+  assert(type(content) == "string", "content must be a string")
   local hover_response = {
     jsonrpc = "2.0",
     id = request_id,

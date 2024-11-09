@@ -8,7 +8,9 @@ logger.init()
 
 ---@type table<string, string>
 local documents = {}
+local current_uri = ""
 local current_file = ""
+local current_file_path = ""
 ---@type string
 local root_path = io.popen("git rev-parse --show-toplevel 2>&1"):read("l")
 
@@ -28,7 +30,7 @@ while true do
         server.initialize(request.id)
       end,
       ["textDocument/didOpen"] = function()
-        local current_uri = request.params.textDocument.uri
+        current_uri = request.params.textDocument.uri
 
         local root_path_not_found =
           root_path:match("fatal: not a git repository %(or any of the parent directories%): %.git")
@@ -37,16 +39,21 @@ while true do
           root_path = current_uri:sub(#"file:///"):gsub("/[^/]+%.nelua", "")
         end
 
-        local current_file_path = current_uri:sub(#"file://" + 1)
+        current_file_path = current_uri:sub(#"file://" + 1)
 
-        assert(current_uri == "file://" .. current_file_path, "file paths do not match")
+        assert(current_uri == "file://" .. current_file_path, "current_uri does not match current file path")
         current_file = server.did_open(current_file_path)
+        documents[current_uri] = current_file
       end,
       ["textDocument/hover"] = function()
         local current_line = request.params.position.line
         local current_char = request.params.position.character
 
-        server.hover(request.id, current_file, current_line, current_char)
+        server.hover(request.id, documents, current_uri, current_file, current_file_path, current_line, current_char)
+      end,
+      ["textDocument/didClose"] = function()
+        assert(current_uri:match("file://"), "provided string is not a uri")
+        documents[current_uri] = nil
       end,
       ["shutdown"] = function()
         server.shutdown()

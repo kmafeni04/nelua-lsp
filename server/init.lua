@@ -17,11 +17,14 @@ function server.did_open(current_file_path)
 end
 
 ---@param request_id integer
+---@param documents table<string, string>
+---@param current_uri string
 ---@param current_file string
+---@param current_file_path string
 ---@param current_line integer
 ---@param current_char integer
-function server.hover(request_id, current_file, current_line, current_char)
-  hover(request_id, current_file, current_line, current_char)
+function server.hover(request_id, documents, current_uri, current_file, current_file_path, current_line, current_char)
+  hover(request_id, documents, current_uri, current_file, current_file_path, current_line, current_char)
 end
 
 function server.shutdown()
