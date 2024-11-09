@@ -1,5 +1,6 @@
 local sstream = require("nelua.utils.sstream")
 
+local switch = require("lib.switch")
 local analyze_ast = require("utils.analyze_ast")
 local logger = require("utils.logger")
 local response = require("utils.response")
@@ -60,12 +61,64 @@ return function(request_id, documents, current_uri, current_file, current_file_p
     --   logger.log(tostring(k) .. "  k")
     --   logger.log(tostring(v) .. "  v")
     -- end
+    -- logger.log(ast)
+    -- logger.log(assert(found_nodes)[#found_nodes - 1])
+    logger.log(lastnode)
 
-    if lastnode.attr.name then
+    if lastnode.attr.builtin then
+      ss:add("```nelua\nType: ")
+      switch(lastnode.attr.name, {
+        ["require"] = function()
+          ss:add("function(modname: string)")
+        end,
+        ["print"] = function()
+          ss:add("polyfunction(varargs): void")
+        end,
+        ["panic"] = function()
+          ss:add("function(message: string): void")
+        end,
+        ["error"] = function()
+          ss:add("function(message: string): void")
+        end,
+        ["assert"] = function()
+          ss:add("polyfunction(v: auto, message: facultative(string)): void")
+        end,
+        ["check"] = function()
+          ss:add("polyfunction(cond: boolean, message: facultative(string)): void")
+        end,
+        ["likely"] = function()
+          ss:add("function(cond: boolean): boolean")
+        end,
+        ["unlikely"] = function()
+          ss:add("function(cond: boolean): boolean")
+        end,
+      })
+      ss:add("\n```")
+
+      content = ss:tostring("\n```")
+    elseif lastnode.attr.name then
       ss:addmany(lastnode.attr.name, "\n```nelua\n", "Type: ", lastnode.attr.type, "\n```")
       content = ss:tostring()
-    elseif lastnode.attr.type and tostring(lastnode.attr.type) == "string" then
+    elseif lastnode.attr.type and tostring(lastnode.attr.type) == "string" and lastnode.attr.value then
       ss:addmany("```nelua\n", #lastnode.attr.value, " bytes", "\n```")
+      content = ss:tostring()
+    elseif lastnode.attr.type and tostring(lastnode.attr.type) == "string" and lastnode.attr.ismethod then
+      local node_name, node_type = tostring(lastnode.attr.calleesym):match("^(.-):%s*(.+)")
+      ss:addmany(node_name, "\n```nelua\n", "Type: ", node_type, "\n```")
+      content = ss:tostring()
+    elseif lastnode.attr.dotfieldname then
+      local parent_name = ""
+      if lastnode[2].attr.name then
+        parent_name = lastnode[2].attr.name .. "."
+      elseif lastnode[2].attr.dotfieldname then
+        parent_name = lastnode[2].attr.dotfieldname .. "."
+      elseif not lastnode[2].attr.name and not lastnode[2].attr.dotfieldname and lastnode[2].attr.type then
+        parent_name = tostring(lastnode[2].attr.type) .. "."
+      end
+      ss:addmany(parent_name, lastnode.attr.dotfieldname, "\n```nelua\n", "Type: ", lastnode.attr.type, "\n```")
+      content = ss:tostring()
+    elseif not lastnode.attr.name and lastnode.attr.value then
+      ss:addmany("```nelua\n", "Type: ", lastnode.attr.value, "\n```")
       content = ss:tostring()
     end
   else
