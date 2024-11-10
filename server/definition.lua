@@ -2,11 +2,25 @@ local response = require("utils.response")
 local logger = require("utils.logger")
 local find_node = require("utils.find_node")
 
----@param document string
----@param target_pos integer
----@return integer
----@return integer
-local function find_definition_loc(document, target_pos)
+---@param documents table<string, string>
+---@param target_node table
+---@param locs Loc[]
+local function add_new_definition(documents, target_node, locs)
+  local target_pos = target_node.pos
+  local target_uri = "file://" .. target_node.src.name
+
+  ---@type string
+  local document
+  if documents[target_uri] then
+    document = documents[target_uri]
+  else
+    document = io.open(target_node.src.name):read("a")
+  end
+
+  if not document then
+    return
+  end
+
   local line_num = 0
   local pos = 1
   for char in document:gmatch("([%s%S])") do
@@ -27,7 +41,22 @@ local function find_definition_loc(document, target_pos)
     end
   end
   local start = pos - distance_to_prev_newline - 1
-  return line_num, start
+
+  ---@type Loc
+  local loc = {
+    uri = target_uri,
+    range = {
+      start = {
+        line = line_num,
+        character = start,
+      },
+      ["end"] = {
+        line = line_num,
+        character = start + #target_node.attr.name,
+      },
+    },
+  }
+  table.insert(locs, loc)
 end
 
 ---@param request_id integer
@@ -37,109 +66,32 @@ end
 ---@param current_line integer
 ---@param current_char integer
 return function(request_id, documents, current_file, current_file_path, current_line, current_char)
+  -- logger.log(current_file_path)
   local current_node, err = find_node(current_file, current_file_path, current_line, current_char)
   local locs = nil
   if current_node then
+    ---@type Loc[]
     locs = {}
-    if current_node.is_Id and not current_node.attr.builtin then
+    if current_node.is_IdDecl then
       local target_node = current_node.attr.node
-      local target_pos = target_node.pos
-      local target_uri = "file://" .. target_node.src.name
-
-      if documents[target_uri] then
-        local line_num, start = find_definition_loc(documents[target_uri], target_pos)
-        ---@type Loc
-        local loc = {
-          uri = target_uri,
-          range = {
-            start = {
-              line = line_num,
-              character = start,
-            },
-            ["end"] = {
-              line = line_num,
-              character = start + #target_node.attr.name,
-            },
-          },
-        }
-        table.insert(locs, loc)
-      else
-        ---@type string
-        local document = io.open(target_node.src.name, "r"):read("a")
-        local line_num, start = find_definition_loc(document, target_pos)
-        logger.log(start)
-        ---@type Loc
-        local loc = {
-          uri = target_uri,
-          range = {
-            start = {
-              line = line_num,
-              character = start,
-            },
-            ["end"] = {
-              line = line_num,
-              character = start + #target_node.attr.name,
-            },
-          },
-        }
-        table.insert(locs, loc)
-      end
-      logger.log(target_uri)
+      add_new_definition(documents, target_node, locs)
     elseif current_node.is_call then
-      logger.log(current_node.attr.calleesym.node)
+      local target_node = current_node.attr.calleesym.node
+      target_node.attr.name = current_node[1] .. " "
+      add_new_definition(documents, target_node, locs)
+    elseif current_node.is_Id and not current_node.attr.builtin then
+      local target_node = current_node.attr.node
+      add_new_definition(documents, target_node, locs)
+    elseif current_node.is_DotIndex and current_node.attr.ftype and current_node.done and current_node.done.defnode then
+      local target_node = current_node.done.defnode[2]
+      target_node.attr.name = current_node[1] .. " "
+      add_new_definition(documents, target_node, locs)
     elseif current_node.is_DotIndex then
-      -- logger.log(current_node.attr)
-      -- local target_node = current_node[2].attr.node
-
-      -- local target_pos = target_node.pos
-      -- local target_uri = "file://" .. target_node.src.name
-      -- -- logger.log(current_node[2].attr.node)
-      -- if documents[target_uri] then
-      --   local line_num, start = find_definition_loc(documents[target_uri], target_pos)
-      --   ---@type Loc
-      --   local loc = {
-      --     uri = target_uri,
-      --     range = {
-      --       start = {
-      --         line = line_num,
-      --         character = start,
-      --       },
-      --       ["end"] = {
-      --         line = line_num,
-      --         character = start + #target_node.attr.name,
-      --       },
-      --     },
-      --   }
-      --   table.insert(locs, loc)
-      -- else
-      --   ---@type string
-      --   local document = io.open(target_node.src.name, "r"):read("a")
-      --   local line_num, start = find_definition_loc(document, target_pos)
-      --   logger.log(start)
-      --   ---@type Loc
-      --   local loc = {
-      --     uri = target_uri,
-      --     range = {
-      --       start = {
-      --         line = line_num,
-      --         character = start,
-      --       },
-      --       ["end"] = {
-      --         line = line_num,
-      --         character = start + #target_node.attr.name,
-      --       },
-      --     },
-      --   }
-      --   table.insert(locs, loc)
-      -- end
+      local target_node = current_node[2].attr.node
+      add_new_definition(documents, target_node, locs)
     elseif current_node.attr.builtin then
       -- TODO
-      -- for k, v in pairs(current_node.attr) do
-      --   logger.log(tostring(k) .. "  k:" .. type(v))
-      --   -- logger.log(tostring(v) .. "  v")
-      -- end
     end
-    ---@type Loc[]
   else
     logger.log(err)
   end

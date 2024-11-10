@@ -10,7 +10,7 @@ local function find_pos(current_file, current_line, current_char)
   for line in current_file:gmatch("[^\r\n]*\r?\n") do
     if i == current_line then
       pos = pos + current_char
-      return pos + 1
+      break
     end
     i = i + 1
     pos = pos + #line

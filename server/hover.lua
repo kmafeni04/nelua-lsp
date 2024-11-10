@@ -7,28 +7,22 @@ local logger = require("utils.logger")
 local response = require("utils.response")
 
 ---@param request_id integer
----@param documents table<string, string>
----@param current_uri string
 ---@param current_file string
 ---@param current_file_path string
 ---@param current_line integer
 ---@param current_char integer
-return function(request_id, documents, current_uri, current_file, current_file_path, current_line, current_char)
-  current_file = current_file or documents[current_uri]
+return function(request_id, current_file, current_file_path, current_line, current_char)
   local content = ""
   local ss = sstream()
   local current_node = find_node(current_file, current_file_path, current_line, current_char)
   if not current_node then
-    return nil
+    return
   end
 
-  -- for k, v in pairs(lastnode) do
+  -- for k, v in pairs(current_node) do
   --   logger.log(tostring(k) .. "  k")
   --   logger.log(tostring(v) .. "  v")
   -- end
-  -- logger.log(ast)
-  -- logger.log(assert(found_nodes)[#found_nodes - 1])
-
   if current_node.attr.builtin then
     ss:add("```nelua\nType: ")
     switch(current_node.attr.name, {
@@ -60,31 +54,66 @@ return function(request_id, documents, current_uri, current_file, current_file_p
     ss:add("\n```")
 
     content = ss:tostring("\n```")
-  elseif current_node.attr.name then
-    ss:addmany(current_node.attr.name, "\n```nelua\n", "Type: ", current_node.attr.type, "\n```")
+  elseif current_node.is_Id or current_node.is_IdDecl then
+    ss:addmany(current_node.attr.name, "\n```nelua\n", "Type: ", current_node.attr.type)
+    if current_node.attr.value then
+      ss:add(" = ")
+      if tostring(current_node.attr.type) == "string" then
+        if current_node.attr.value:match("[\r\n]") then
+          ss:addmany("[[", current_node.attr.value, "]]")
+        else
+          ss:addmany('"', current_node.attr.value, '"')
+        end
+      else
+        ss:add(current_node.attr.value)
+      end
+    end
+    ss:add("\n```")
     content = ss:tostring()
-  elseif current_node.attr.type and tostring(current_node.attr.type) == "string" and current_node.attr.value then
+    -- if error, check if current_node.attr.value is nil
+  elseif current_node.is_String then
     ss:addmany("```nelua\n", #current_node.attr.value, " bytes", "\n```")
     content = ss:tostring()
-  elseif current_node.attr.type and tostring(current_node.attr.type) == "string" and current_node.attr.ismethod then
-    local node_name, node_type = tostring(current_node.attr.calleesym):match("^(.-):%s*(.+)")
-    ss:addmany(node_name, "\n```nelua\n", "Type: ", node_type, "\n```")
+  elseif current_node.is_Pair then
+    ss:addmany(current_node[1], "\n```nelua\n", "Type: ", current_node[2].attr.type)
+    if current_node[2].attr.value then
+      ss:add(" = ")
+      if tostring(current_node[2].attr.type) == "string" then
+        if current_node[2].attr.value:match("[\r\n]") then
+          ss:addmany("[[", current_node[2].attr.value, "]]")
+        else
+          ss:addmany('"', current_node[2].attr.value, '"')
+        end
+      else
+        ss:add(current_node[2].attr.value)
+      end
+    end
+    ss:add("\n```")
     content = ss:tostring()
-  elseif current_node.attr.dotfieldname then
+  elseif current_node.is_call then
+    local type_name, node_type = tostring(current_node.attr.calleesym):match("^(.-):%s*(.+)")
+    ss:addmany(type_name, "\n```nelua\n", "Type: ", node_type, "\n```")
+    content = ss:tostring()
+  elseif current_node.is_DotIndex then
+    local sss = sstream()
     local parent_name = ""
     if current_node[2].attr.name then
-      parent_name = current_node[2].attr.name .. "."
+      sss:addmany(current_node[2].attr.name, ".")
+      parent_name = sss:tostring()
     elseif current_node[2].attr.dotfieldname then
-      parent_name = current_node[2].attr.dotfieldname .. "."
+      sss:addmany(current_node[2].attr.dotfieldname, ".")
+      parent_name = sss:tostring()
     elseif not current_node[2].attr.name and not current_node[2].attr.dotfieldname and current_node[2].attr.type then
-      parent_name = tostring(current_node[2].attr.type) .. "."
+      sss:addmany(current_node[2].attr.type, ".")
+      parent_name = sss:tostring()
     end
     ss:addmany(parent_name, current_node.attr.dotfieldname, "\n```nelua\n", "Type: ", current_node.attr.type, "\n```")
     content = ss:tostring()
   elseif not current_node.attr.name and current_node.attr.value then
-    ss:addmany("```nelua\n", "Type: ", current_node.attr.value, "\n```")
+    ss:addmany(current_node[1], "\n```nelua\n", "Type: ", current_node.attr.value, "\n```")
     content = ss:tostring()
   end
+
   local hover_response = response.hover(request_id, content)
   io.write(hover_response)
   io.flush()

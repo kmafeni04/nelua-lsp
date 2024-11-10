@@ -26,6 +26,7 @@ while true do
   if request then
     if request.params.textDocument then
       current_uri = request.params.textDocument.uri
+      current_file_path = current_uri:sub(#"file://" + 1)
     end
     logger.log("Method: " .. request.method)
     switch(request.method, {
@@ -40,8 +41,6 @@ while true do
           root_path = current_uri:sub(#"file:///"):gsub("/[^/]+%.nelua", "")
         end
 
-        current_file_path = current_uri:sub(#"file://" + 1)
-
         current_file = server.did_open(current_file_path)
         documents[current_uri] = current_file
 
@@ -49,6 +48,8 @@ while true do
       end,
       ["textDocument/didChange"] = function()
         current_file = server.did_change(documents, request.params, current_uri)
+        documents[current_uri] = current_file
+
         server.diagnostic(documents, current_file, current_file_path, current_uri)
       end,
       ["textDocument/didSave"] = function()
@@ -57,8 +58,9 @@ while true do
       ["textDocument/hover"] = function()
         local current_line = request.params.position.line
         local current_char = request.params.position.character
+        current_file = documents[current_uri]
 
-        server.hover(request.id, documents, current_uri, current_file, current_file_path, current_line, current_char)
+        server.hover(request.id, current_file, current_file_path, current_line, current_char)
       end,
       ["textDocument/definition"] = function()
         local current_line = request.params.position.line

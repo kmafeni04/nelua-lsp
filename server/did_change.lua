@@ -5,10 +5,7 @@
 return function(documents, request_params, current_uri)
   local current_file = ""
   if documents[current_uri] then
-    local content_changes = request_params.contentChanges
-    for i = 1, #content_changes do
-      current_file = content_changes[i].text
-    end
+    current_file = request_params.contentChanges[1].text
   end
   return current_file
 end
