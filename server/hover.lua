@@ -2,7 +2,7 @@ local sstream = require("nelua.utils.sstream")
 
 local switch = require("lib.switch")
 
-local find_node = require("utils.find_node")
+local find_nodes = require("utils.find_nodes")
 local logger = require("utils.logger")
 local response = require("utils.response")
 
@@ -14,17 +14,19 @@ local response = require("utils.response")
 return function(request_id, current_file, current_file_path, current_line, current_char)
   local content = ""
   local ss = sstream()
-  local current_node = find_node(current_file, current_file_path, current_line, current_char)
+  local current_node, _, err = find_nodes(current_file, current_file_path, current_line, current_char)
   if not current_node then
+    logger.log(err)
     return
   end
 
+  -- logger.log(current_node)
   -- for k, v in pairs(current_node) do
   --   logger.log(tostring(k) .. "  k")
   --   logger.log(tostring(v) .. "  v")
   -- end
   if current_node.attr.builtin then
-    ss:add("```nelua\nType: ")
+    ss:addmany(current_node.attr.name, "\n```nelua\nType: ")
     switch(current_node.attr.name, {
       ["require"] = function()
         ss:add("function(modname: string)")
@@ -107,7 +109,13 @@ return function(request_id, current_file, current_file_path, current_line, curre
       sss:addmany(current_node[2].attr.type, ".")
       parent_name = sss:tostring()
     end
-    ss:addmany(parent_name, current_node.attr.dotfieldname, "\n```nelua\n", "Type: ", current_node.attr.type, "\n```")
+    local name = ""
+    if current_node.attr.dotfieldname then
+      name = current_node.attr.dotfieldname
+    else
+      name = current_node[1]
+    end
+    ss:addmany(parent_name, name, "\n```nelua\n", "Type: ", current_node.attr.type, "\n```")
     content = ss:tostring()
   elseif not current_node.attr.name and current_node.attr.value then
     ss:addmany(current_node[1], "\n```nelua\n", "Type: ", current_node.attr.value, "\n```")

@@ -40,6 +40,7 @@ end
 ---@param current_line integer
 ---@param current_char integer
 ---@return table? last_node
+---@return table? found_nodes
 ---@return table err
 return function(current_file, current_file_path, current_line, current_char)
   local ast, err = analyze_ast(current_file, current_file_path)
@@ -49,11 +50,11 @@ return function(current_file, current_file_path, current_line, current_char)
     local found_nodes = find_nodes_by_pos(ast, pos, {})
     if not found_nodes then
       err.message = "Could not find any nodes"
-      return nil, err
+      return nil, nil, err
     end
     local last_node = found_nodes[#found_nodes]
-    return last_node, err
+    return last_node, found_nodes, err
   else
-    return nil, err
+    return nil, nil, err
   end
 end

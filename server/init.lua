@@ -53,13 +53,22 @@ function server.hover(request_id, current_file, current_file_path, current_line,
 end
 
 ---@param request_id integer
+---@param root_path string
 ---@param documents table<string, string>
 ---@param current_file string
 ---@param current_file_path string
 ---@param current_line integer
 ---@param current_char integer
-function server.definition(request_id, documents, current_file, current_file_path, current_line, current_char)
-  definition(request_id, documents, current_file, current_file_path, current_line, current_char)
+function server.definition(
+  request_id,
+  root_path,
+  documents,
+  current_file,
+  current_file_path,
+  current_line,
+  current_char
+)
+  definition(request_id, root_path, documents, current_file, current_file_path, current_line, current_char)
 end
 
 function server.shutdown()

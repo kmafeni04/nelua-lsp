@@ -1,4 +1,4 @@
-local interp = require("lib.interp")
+-- TODO: Work on completions
 local json = require("utils.json")
 local switch = require("lib.switch")
 local server = require("server")
@@ -67,7 +67,7 @@ while true do
         local current_char = request.params.position.character
         current_file = documents[current_uri]
 
-        server.definition(request.id, documents, current_file, current_file_path, current_line, current_char)
+        server.definition(request.id, root_path, documents, current_file, current_file_path, current_line, current_char)
       end,
       ["textDocument/didClose"] = function()
         documents[current_uri] = nil
