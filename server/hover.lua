@@ -20,7 +20,7 @@ return function(request_id, current_file, current_file_path, current_line, curre
   if found_nodes then
     local current_node = found_nodes[#found_nodes]
 
-    -- logger.log(current_node)
+    logger.log(current_node)
     -- for k, v in pairs(current_node) do
     --   logger.log(tostring(k) .. "  k")
     --   logger.log(tostring(v) .. "  v")
@@ -72,8 +72,8 @@ return function(request_id, current_file, current_file_path, current_line, curre
       end
       ss:add("\n```")
       content = ss:tostring()
-    -- if error, check if current_node.attr.value is nil
     elseif current_node.is_String then
+      -- NOTE: if error occurs in future, check if current_node.attr.value is nil
       ss:addmany("```nelua\n", #current_node.attr.value, " bytes", "\n```")
       content = ss:tostring()
     elseif current_node.is_Pair then
@@ -116,6 +116,14 @@ return function(request_id, current_file, current_file_path, current_line, curre
         name = current_node[1]
       end
       ss:addmany(parent_name, name, "\n```nelua\n", "Type: ", current_node.attr.type, "\n```")
+      content = ss:tostring()
+    elseif current_node.is_PointerType then
+      --TODO: Display more information
+      ss:addmany(current_node.attr.value, "\n```nelua\n", "Type: ", current_node.attr.type, "\n```")
+      content = ss:tostring()
+    elseif current_node.is_RecordType then
+      --TODO: Display more information
+      ss:addmany("record\n```nelua\n", "Type: ", current_node.attr.value, "\n```")
       content = ss:tostring()
     elseif not current_node.attr.name and current_node.attr.value then
       ss:addmany(current_node[1], "\n```nelua\n", "Type: ", current_node.attr.value, "\n```")
