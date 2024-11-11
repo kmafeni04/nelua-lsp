@@ -4,20 +4,21 @@ local logger = require("utils.logger")
 local json = {}
 
 ---@param msg table
----@return string?
+---@return string? result
+---@return string? err
 function json.encode(msg)
   local ok, content = pcall(rxi_json.encode, msg)
   if ok then
     local result = "Content-Length: " .. #content .. "\r\n\r\n" .. content
-    return result
+    return result, nil
   else
-    return nil
+    return nil, content
   end
 end
 
 ---@param msg string
----@return table?
----@return string?
+---@return table? obj
+---@return string? err
 function json.decode(msg)
   local ok, object = pcall(rxi_json.decode, msg)
   if ok then

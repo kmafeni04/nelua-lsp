@@ -11,7 +11,7 @@ local notification = {}
 ---@param msg string
 ---@param clear boolean
 function notification.diagnostic(current_uri, line, start_char, end_char, severity, msg, clear)
-  local diagnostic_response = {
+  local diagnostic_notif = {
     jsonrpc = "2.0",
     method = "textDocument/publishDiagnostics",
     params = {
@@ -29,10 +29,15 @@ function notification.diagnostic(current_uri, line, start_char, end_char, severi
     },
   }
   if clear then
-    diagnostic_response.params.diagnostics[1] = nil
+    diagnostic_notif.params.diagnostics[1] = nil
   end
-  io.write(json.encode(diagnostic_response))
-  io.flush()
+  local encoded_notif, err = json.encode(diagnostic_notif)
+  if encoded_notif then
+    io.write(encoded_notif)
+    io.flush()
+  else
+    logger.log(err)
+  end
 end
 
 return notification
