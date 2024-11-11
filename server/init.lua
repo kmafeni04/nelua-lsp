@@ -9,9 +9,7 @@ local server = {}
 
 ---@param request_id integer
 function server.initialize(request_id)
-  local initialize_response = response.initialize(request_id)
-  io.stdout:write(initialize_response)
-  io.flush()
+  response.initialize(request_id)
 end
 
 ---@param current_file_path string
@@ -33,10 +31,10 @@ function server.diagnostic(documents, current_file, current_file_path, current_u
 end
 
 ---@param documents table<string, string>
----@param request_params table
 ---@param current_uri string
+---@param request_params table
 ---@return string
-function server.did_change(documents, request_params, current_uri)
+function server.did_change(documents, current_uri, request_params)
   local current_file = ""
   if documents[current_uri] then
     current_file = request_params.contentChanges[1].text
@@ -73,9 +71,7 @@ end
 
 function server.shutdown()
   logger.log("LSP Server has been shutdown")
-  local shutdown_response = response.shutdown()
-  io.write(shutdown_response)
-  io.flush()
+  response.shutdown()
 end
 
 return server

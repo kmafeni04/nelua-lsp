@@ -17,12 +17,13 @@ end
 
 ---@param msg string
 ---@return table?
+---@return string?
 function json.decode(msg)
   local ok, object = pcall(rxi_json.decode, msg)
   if ok then
-    return object
+    return object, nil
   else
-    return nil
+    return nil, object
   end
 end
 

@@ -58,9 +58,7 @@ local function create_diagnostic(analysis, analysis_match, severity)
         diag_path, diag_line, diag_s_char = l:match(extern_analysis_match)
         if diag_path then
           local analysis_search_start = analysis:find(extern_analysis_match)
-          logger.log(analysis_search_start)
           local error_len_str = analysis:match("%^~+[^\r\n]", analysis_search_start)
-          logger.log(type(error_len_str))
           local error_len = 1
           if error_len_str then
             error_len = #error_len_str
@@ -87,36 +85,21 @@ end
 ---@param current_file_path string
 ---@param current_uri string
 return function(documents, current_file, current_file_path, current_uri)
-  local parse_err = false
   current_file = current_file or documents[current_uri]
   local ast, err = analyze_ast(current_file, current_file_path)
-  -- for k, v in pairs(context.context.context) do
+  -- for k, v in pairs(err) do
   --   logger.log(tostring(k) .. "  k")
   --   logger.log(tostring(v) .. "  v")
   -- end
-  -- logger.log(ok)
   if not ast then
-    -- logger.log(err.message)
     if err.message:match(":%s*error:") then
       local diag = create_diagnostic(err.message, "(.-):(%d+):(%d+):%s+error:%s+([^\r\n]+)", Severity.Error)
-      local diagnostic =
-        notification.diagnostic(current_uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
-      -- logger.log(diagnostic)
-      io.write(diagnostic)
-      io.flush()
-      parse_err = true
+      notification.diagnostic(current_uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
     elseif err.message:match(":%s*syntax error:") then
       local diag = create_diagnostic(err.message, "(.-):(%d+):(%d+):%s+syntax error:%s+([^\r\n]+)", Severity.Error)
-      local diagnostic =
-        notification.diagnostic(current_uri, diag.line, diag.s_char, diag.e_char, Severity.Error, diag.msg, false)
-      -- logger.log(diagnostic)
-      io.write(diagnostic)
-      io.flush()
-      parse_err = true
+      notification.diagnostic(current_uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
     end
   else
-    local diagnostic = notification.diagnostic(current_uri, 0, 0, 0, 0, "", true)
-    io.write(diagnostic)
-    io.flush()
+    notification.diagnostic(current_uri, 0, 0, 0, 0, "", true)
   end
 end

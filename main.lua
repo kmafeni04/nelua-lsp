@@ -21,7 +21,7 @@ while true do
   _ = io.read("L")
   ---@type string
   local content = io.read(content_length)
-  local request = json.decode(content)
+  local request, err = json.decode(content)
 
   if request then
     if request.params.textDocument then
@@ -41,13 +41,13 @@ while true do
           root_path = current_uri:sub(#"file:///"):gsub("/[^/]+%.nelua", "")
         end
 
-        current_file = server.did_open(current_file_path)
+        current_file = request.params.textDocument.text
         documents[current_uri] = current_file
 
         server.diagnostic(documents, current_file, current_file_path, current_uri)
       end,
       ["textDocument/didChange"] = function()
-        current_file = server.did_change(documents, request.params, current_uri)
+        current_file = server.did_change(documents, current_uri, request.params)
         documents[current_uri] = current_file
 
         server.diagnostic(documents, current_file, current_file_path, current_uri)
@@ -79,5 +79,7 @@ while true do
         os.exit()
       end,
     })
+  else
+    logger.log(err)
   end
 end

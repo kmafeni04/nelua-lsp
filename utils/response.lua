@@ -5,7 +5,6 @@ local json = require("utils.json")
 local response = {}
 
 ---@param request_id integer
----@return string?
 function response.initialize(request_id)
   local intilaize_response = {
     jsonrpc = "2.0",
@@ -22,12 +21,12 @@ function response.initialize(request_id)
       version = "0.0.1",
     },
   }
-  return json.encode(intilaize_response)
+  io.write(json.encode(intilaize_response))
+  io.flush()
 end
 
 ---@param request_id integer
 ---@param content string
----@return string?
 function response.hover(request_id, content)
   local hover_response = {
     jsonrpc = "2.0",
@@ -36,7 +35,8 @@ function response.hover(request_id, content)
       contents = content,
     },
   }
-  return json.encode(hover_response)
+  io.write(json.encode(hover_response))
+  io.flush()
 end
 
 ---@class Position
@@ -61,13 +61,15 @@ function response.definition(request_id, locs)
     error = "No definition found",
   }
 
-  return json.encode(definition_response)
+  io.write(json.encode(definition_response))
+  io.flush()
 end
 
----@return string?
 function response.shutdown()
   local shutdown_response = { result = {} }
-  return json.encode(shutdown_response)
+
+  io.write(json.encode(shutdown_response))
+  io.flush()
 end
 
 return response

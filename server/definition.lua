@@ -27,7 +27,6 @@ local function add_new_definition(documents, target_node, locs)
   local pos = 1
   for char in document:gmatch("([%s%S])") do
     if pos == target_pos then
-      logger.log(pos)
       break
     end
     pos = pos + 1
@@ -69,14 +68,11 @@ end
 ---@param current_line integer
 ---@param current_char integer
 return function(request_id, root_path, documents, current_file, current_file_path, current_line, current_char)
-  -- logger.log(current_file_path)
-  local current_node, found_nodes, err = find_nodes(current_file, current_file_path, current_line, current_char)
-  local previous_node
-  if found_nodes and #found_nodes > 1 then
-    previous_node = found_nodes[#found_nodes - 1]
-  end
+  local found_nodes, err = find_nodes(current_file, current_file_path, current_line, current_char)
   local locs = nil
-  if current_node then
+  if found_nodes then
+    local current_node = found_nodes[#found_nodes]
+    local previous_node = found_nodes[#found_nodes - 1]
     ---@type Loc[]
     locs = {}
     if current_node.is_IdDecl then
@@ -152,14 +148,16 @@ return function(request_id, root_path, documents, current_file, current_file_pat
       end
     elseif current_node.is_call then
       local target_node = current_node.attr.calleesym.node
-      target_node.attr.name = current_node[1] .. " "
+      -- location starts from . so add it to properlu calculate name length
+      target_node.attr.name = "." .. current_node[1]
       add_new_definition(documents, target_node, locs)
     elseif current_node.is_Id and not current_node.attr.builtin then
       local target_node = current_node.attr.node
       add_new_definition(documents, target_node, locs)
     elseif current_node.is_DotIndex and current_node.attr.ftype and current_node.done and current_node.done.defnode then
       local target_node = current_node.done.defnode[2]
-      target_node.attr.name = current_node[1] .. " "
+      -- location starts from . so add it to properlu calculate name length
+      target_node.attr.name = "." .. current_node[1]
       add_new_definition(documents, target_node, locs)
     elseif current_node.is_DotIndex then
       local target_node = current_node[2].attr.node
@@ -170,7 +168,5 @@ return function(request_id, root_path, documents, current_file, current_file_pat
   else
     logger.log(err)
   end
-  local definition_response = response.definition(request_id, locs)
-  io.write(definition_response)
-  io.flush()
+  response.definition(request_id, locs)
 end
