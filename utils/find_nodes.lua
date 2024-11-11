@@ -26,14 +26,15 @@ local function find_nodes_by_pos(node, pos, foundnodes)
   if type(node) ~= "table" then
     return nil
   end
-  if
-    node._astnode
-    and node.pos
-    and pos >= node.pos
-    and node[1]
-    and type(node[1]) == "string"
-    and pos <= node.pos + #node[1]
-  then
+  -- if
+  --   node._astnode
+  --   and node.pos
+  --   and pos >= node.pos
+  --   and node[1]
+  --   and type(node[1]) == "string"
+  --   and pos <= node.pos + #node[1]
+  -- then
+  if node._astnode and node.pos and pos >= node.pos and node.endpos and pos < node.endpos then
     foundnodes[#foundnodes + 1] = node
   end
   for i = 1, node.nargs or #node do
@@ -64,6 +65,10 @@ return function(current_file, current_file_path, current_line, current_char)
       end
       return nil, err
     end
+    -- for k, v in pairs(found_nodes) do
+    --   logger.log(tostring(k) .. "  k")
+    --   logger.log(tostring(v) .. "  v")
+    -- end
     return found_nodes, nil
   else
     return nil, err
