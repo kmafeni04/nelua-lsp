@@ -3,11 +3,14 @@ local json = require("utils.json")
 local switch = require("lib.switch")
 local server = require("server")
 local logger = require("utils.logger")
+local analyze_ast = require("utils.analyze_ast")
 
 logger.init()
 
 ---@type table<string, string>
 local documents = {}
+---@type table<string, table>
+local ast_cache = {}
 local current_uri = ""
 local current_file = ""
 local current_file_path = ""
@@ -44,16 +47,31 @@ while true do
         current_file = request.params.textDocument.text
         documents[current_uri] = current_file
 
-        server.diagnostic(documents, current_file, current_file_path, current_uri)
+        local ast = server.diagnostic(documents, current_file, current_file_path, current_uri)
+        if ast then
+          ast_cache[current_uri] = ast
+        end
       end,
       ["textDocument/didChange"] = function()
         current_file = server.did_change(documents, current_uri, request.params)
         documents[current_uri] = current_file
 
-        server.diagnostic(documents, current_file, current_file_path, current_uri)
+        local ast = server.diagnostic(documents, current_file, current_file_path, current_uri)
+        if ast then
+          ast_cache[current_uri] = ast
+        end
       end,
       ["textDocument/didSave"] = function()
-        server.diagnostic(documents, current_file, current_file_path, current_uri)
+        local ast = server.diagnostic(documents, current_file, current_file_path, current_uri)
+        if ast then
+          ast_cache[current_uri] = ast
+        end
+      end,
+      ["textDocument/completion"] = function()
+        local ast = server.completion(request.id, request.params, current_uri, documents, ast_cache)
+        if ast then
+          ast_cache[current_uri] = ast
+        end
       end,
       ["textDocument/hover"] = function()
         local current_line = request.params.position.line

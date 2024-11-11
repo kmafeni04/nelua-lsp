@@ -2,6 +2,7 @@ local logger = require("utils.logger")
 local response = require("utils.response")
 
 local diagnostic = require("server.diagnostic")
+local completion = require("server.completion")
 local hover = require("server.hover")
 local definition = require("server.definition")
 
@@ -26,8 +27,9 @@ end
 ---@param current_file string
 ---@param current_file_path string
 ---@param current_uri string
+---@return table? ast
 function server.diagnostic(documents, current_file, current_file_path, current_uri)
-  diagnostic(documents, current_file, current_file_path, current_uri)
+  return diagnostic(documents, current_file, current_file_path, current_uri)
 end
 
 ---@param documents table<string, string>
@@ -41,6 +43,16 @@ function server.did_change(documents, current_uri, request_params)
   end
   return current_file
 end
+
+---@param request_id integer
+---@param request_params table
+---@param current_uri string
+---@param documents table<string, string>
+---@param ast_cache table<string, table>
+function server.completion(request_id, request_params, current_uri, documents, ast_cache)
+  return completion(request_id, request_params, current_uri, documents, ast_cache)
+end
+
 ---@param request_id integer
 ---@param current_file string
 ---@param current_file_path string

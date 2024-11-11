@@ -84,6 +84,7 @@ end
 ---@param current_file string
 ---@param current_file_path string
 ---@param current_uri string
+---@return table? ast
 return function(documents, current_file, current_file_path, current_uri)
   current_file = current_file or documents[current_uri]
   local ast, err = analyze_ast(current_file, current_file_path)
@@ -91,15 +92,21 @@ return function(documents, current_file, current_file_path, current_uri)
   --   logger.log(tostring(k) .. "  k")
   --   logger.log(tostring(v) .. "  v")
   -- end
-  if not ast then
+  if err then
     if err.message:match(":%s*error:") then
       local diag = create_diagnostic(err.message, "(.-):(%d+):(%d+):%s+error:%s+([^\r\n]+)", Severity.Error)
       notification.diagnostic(current_uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
+      return nil
     elseif err.message:match(":%s*syntax error:") then
       local diag = create_diagnostic(err.message, "(.-):(%d+):(%d+):%s+syntax error:%s+([^\r\n]+)", Severity.Error)
       notification.diagnostic(current_uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
+      return nil
+    else
+      notification.diagnostic(current_uri, 0, 0, 0, 0, "", true)
+      return ast
     end
   else
     notification.diagnostic(current_uri, 0, 0, 0, 0, "", true)
+    return ast
   end
 end

@@ -12,6 +12,7 @@ function response.initialize(request_id)
     result = {
       capabilities = {
         textDocumentSync = 1,
+        completionProvider = { triggerCharacters = { ".", ":", "@" } },
         hoverProvider = true,
         definitionProvider = true,
       },
@@ -21,8 +22,37 @@ function response.initialize(request_id)
       version = "0.0.1",
     },
   }
-  io.write(json.encode(intilaize_response))
-  io.flush()
+  local encoded_msg, err = json.encode(intilaize_response)
+  if encoded_msg then
+    io.write(encoded_msg)
+    io.flush()
+  else
+    logger.log(err)
+  end
+end
+
+---@class CompItem
+---@field label string
+---@field kind CompItemKind
+---@field documentation string
+---@field insertTextFormat integer
+
+---@param request_id integer
+---@param comp_list CompItem[]
+function response.completion(request_id, comp_list)
+  local completion_response = {
+    jsonrpc = "2.0",
+    id = request_id,
+    result = comp_list,
+    error = "Failed to create completion list",
+  }
+  local encoded_msg, err = json.encode(completion_response)
+  if encoded_msg then
+    io.write(encoded_msg)
+    io.flush()
+  else
+    logger.log(err)
+  end
 end
 
 ---@param request_id integer
@@ -34,9 +64,15 @@ function response.hover(request_id, content)
     result = {
       contents = content,
     },
+    error = "Failed to provide hover",
   }
-  io.write(json.encode(hover_response))
-  io.flush()
+  local encoded_msg, err = json.encode(hover_response)
+  if encoded_msg then
+    io.write(encoded_msg)
+    io.flush()
+  else
+    logger.log(err)
+  end
 end
 
 ---@class Position
@@ -61,15 +97,25 @@ function response.definition(request_id, locs)
     error = "No definition found",
   }
 
-  io.write(json.encode(definition_response))
-  io.flush()
+  local encoded_msg, err = json.encode(definition_response)
+  if encoded_msg then
+    io.write(encoded_msg)
+    io.flush()
+  else
+    logger.log(err)
+  end
 end
 
 function response.shutdown()
   local shutdown_response = { result = {} }
 
-  io.write(json.encode(shutdown_response))
-  io.flush()
+  local encoded_msg, err = json.encode(shutdown_response)
+  if encoded_msg then
+    io.write(encoded_msg)
+    io.flush()
+  else
+    logger.log(err)
+  end
 end
 
 return response

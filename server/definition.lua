@@ -83,6 +83,7 @@ return function(request_id, root_path, documents, current_file, current_file_pat
       --   logger.log(tostring(k) .. "  k")
       --   logger.log(tostring(v) .. "  v")
       -- end
+      -- logger.log(#found_nodes)
       if
         previous_node
         and previous_node.is_call
@@ -148,7 +149,7 @@ return function(request_id, root_path, documents, current_file, current_file_pat
       end
     elseif current_node.is_call then
       local target_node = current_node.attr.calleesym.node
-      -- location starts from . so add it to properlu calculate name length
+      -- NOTE: location starts from . so add it to properlu calculate name length
       target_node.attr.name = "." .. current_node[1]
       add_new_definition(documents, target_node, locs)
     elseif current_node.is_Id and not current_node.attr.builtin then
@@ -156,14 +157,14 @@ return function(request_id, root_path, documents, current_file, current_file_pat
       add_new_definition(documents, target_node, locs)
     elseif current_node.is_DotIndex and current_node.attr.ftype and current_node.done and current_node.done.defnode then
       local target_node = current_node.done.defnode[2]
-      -- location starts from . so add it to properlu calculate name length
+      -- NOTE: location starts from . so add it to properlu calculate name length
       target_node.attr.name = "." .. current_node[1]
       add_new_definition(documents, target_node, locs)
     elseif current_node.is_DotIndex then
       local target_node = current_node[2].attr.node
       add_new_definition(documents, target_node, locs)
     elseif current_node.attr.builtin then
-      -- TODO
+      -- TODO: figure out if theres a way to go to definiton on builtin funcs
     end
   else
     logger.log(err)
