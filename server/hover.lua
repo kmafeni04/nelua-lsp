@@ -20,7 +20,7 @@ return function(request_id, current_file, current_file_path, current_line, curre
   if found_nodes then
     local current_node = found_nodes[#found_nodes]
 
-    logger.log(current_node)
+    -- logger.log(current_node)
     -- for k, v in pairs(current_node) do
     --   logger.log(tostring(k) .. "  k")
     --   logger.log(tostring(v) .. "  v")

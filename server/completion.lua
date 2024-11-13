@@ -11,6 +11,8 @@ keywords["true"] = true
 keywords["false"] = true
 keywords["for"] = true
 keywords["if"] = true
+keywords["elseif"] = true
+keywords["else"] = true
 keywords["while"] = true
 keywords["do"] = true
 keywords["end"] = true
@@ -21,6 +23,8 @@ keywords["defer"] = true
 keywords["break"] = true
 keywords["fallthrough"] = true
 keywords["switch"] = true
+
+local symbols = {}
 
 ---@enum InsertTextFormat
 local insert_text_format = {
@@ -83,7 +87,7 @@ local function gen_keywords(comp_list)
 end
 
 ---@param comp_list CompItem[]
-local function gen_builtin_completions(comp_list)
+local function gen_builtin_funcs_completions(comp_list)
   gen_completion(
     "require",
     comp_item_kind.Function,
@@ -151,8 +155,176 @@ local function gen_builtin_completions(comp_list)
 end
 
 ---@param comp_list CompItem[]
+local function gen_primitive_types_completions(comp_list)
+  gen_completion("boolean", comp_item_kind.Class, "", "boolean", insert_text_format.PlainText, comp_list)
+
+  gen_completion("number", comp_item_kind.Class, "", "number", insert_text_format.PlainText, comp_list)
+
+  gen_completion("integer", comp_item_kind.Class, "", "integer", insert_text_format.PlainText, comp_list)
+
+  gen_completion("uinteger", comp_item_kind.Class, "", "uinteger", insert_text_format.PlainText, comp_list)
+
+  gen_completion("byte", comp_item_kind.Class, "", "byte", insert_text_format.PlainText, comp_list)
+
+  gen_completion("isize", comp_item_kind.Class, "", "isize", insert_text_format.PlainText, comp_list)
+
+  gen_completion("int8", comp_item_kind.Class, "", "int8", insert_text_format.PlainText, comp_list)
+
+  gen_completion("int16", comp_item_kind.Class, "", "int16", insert_text_format.PlainText, comp_list)
+
+  gen_completion("int32", comp_item_kind.Class, "", "int32", insert_text_format.PlainText, comp_list)
+
+  gen_completion("int64", comp_item_kind.Class, "", "int64", insert_text_format.PlainText, comp_list)
+
+  gen_completion(
+    "int128",
+    comp_item_kind.Class,
+    "Only supported by some C compilers and architectures",
+    "int128",
+    insert_text_format.PlainText,
+    comp_list
+  )
+
+  gen_completion("usize", comp_item_kind.Class, "", "usize", insert_text_format.PlainText, comp_list)
+
+  gen_completion("uint8", comp_item_kind.Class, "", "uint8", insert_text_format.PlainText, comp_list)
+
+  gen_completion("uint16", comp_item_kind.Class, "", "uint16", insert_text_format.PlainText, comp_list)
+
+  gen_completion("uint32", comp_item_kind.Class, "", "uint32", insert_text_format.PlainText, comp_list)
+
+  gen_completion("uint64", comp_item_kind.Class, "", "uint64", insert_text_format.PlainText, comp_list)
+
+  gen_completion(
+    "uint128",
+    comp_item_kind.Class,
+    "Only supported by some C compilers and architectures",
+    "uint128",
+    insert_text_format.PlainText,
+    comp_list
+  )
+
+  gen_completion("float32", comp_item_kind.Class, "", "float32", insert_text_format.PlainText, comp_list)
+
+  gen_completion("float64", comp_item_kind.Class, "", "float64", insert_text_format.PlainText, comp_list)
+
+  gen_completion(
+    "float128",
+    comp_item_kind.Class,
+    "Only supported by some C compilers and architectures",
+    "float128",
+    insert_text_format.PlainText,
+    comp_list
+  )
+
+  gen_completion("integer", comp_item_kind.Class, "", "integer", insert_text_format.PlainText, comp_list)
+
+  gen_completion("string", comp_item_kind.Class, "", "string", insert_text_format.PlainText, comp_list)
+
+  gen_completion("Array", comp_item_kind.Snippet, "", "[${1:N}${2:T}]", insert_text_format.Snippet, comp_list)
+
+  gen_completion("enum", comp_item_kind.Class, "", "enum", insert_text_format.PlainText, comp_list)
+  gen_completion("enum", comp_item_kind.Snippet, "", "enum{$1}", insert_text_format.Snippet, comp_list)
+
+  gen_completion("record", comp_item_kind.Class, "", "record", insert_text_format.PlainText, comp_list)
+  gen_completion("record", comp_item_kind.Snippet, "", "record{$1}", insert_text_format.Snippet, comp_list)
+
+  gen_completion("union", comp_item_kind.Class, "", "union", insert_text_format.PlainText, comp_list)
+  gen_completion("union", comp_item_kind.Snippet, "", "union{$1}", insert_text_format.Snippet, comp_list)
+
+  gen_completion("pointer", comp_item_kind.Class, "", "pointer", insert_text_format.PlainText, comp_list)
+
+  gen_completion("nilptr", comp_item_kind.Class, "", "nilptr", insert_text_format.PlainText, comp_list)
+
+  gen_completion("function", comp_item_kind.Class, "", "function($1)", insert_text_format.Snippet, comp_list)
+
+  gen_completion("niltype", comp_item_kind.Class, "", "niltype", insert_text_format.PlainText, comp_list)
+
+  gen_completion("void", comp_item_kind.Class, "", "void", insert_text_format.PlainText, comp_list)
+
+  gen_completion("type", comp_item_kind.Class, "", "type", insert_text_format.PlainText, comp_list)
+end
+
+---@param comp_list CompItem[]
+local function gen_lib_types_completions(comp_list)
+  gen_completion("io", comp_item_kind.Class, "", "io", insert_text_format.PlainText, comp_list)
+
+  gen_completion("filestream", comp_item_kind.Class, "", "filestream", insert_text_format.PlainText, comp_list)
+
+  gen_completion("math", comp_item_kind.Class, "", "math", insert_text_format.PlainText, comp_list)
+
+  gen_completion("memory", comp_item_kind.Class, "", "memory", insert_text_format.PlainText, comp_list)
+
+  gen_completion("os", comp_item_kind.Class, "", "os", insert_text_format.PlainText, comp_list)
+
+  gen_completion("traits", comp_item_kind.Class, "", "traits", insert_text_format.PlainText, comp_list)
+
+  gen_completion("utf8", comp_item_kind.Class, "", "utf8", insert_text_format.PlainText, comp_list)
+
+  gen_completion("coroutine", comp_item_kind.Class, "", "coroutine", insert_text_format.PlainText, comp_list)
+
+  gen_completion("hash", comp_item_kind.Class, "", "hash", insert_text_format.PlainText, comp_list)
+
+  gen_completion("Allocator", comp_item_kind.Class, "", "Allocator", insert_text_format.PlainText, comp_list)
+  -- gen_completion("Allocator", comp_item_kind.Class, "", "Allocator", insert_text_format.PlainText, comp_list)
+end
+
+---@param comp_list CompItem[]
+local function gen_generic_types_completions(comp_list)
+  gen_completion("span", comp_item_kind.Class, "", "span(${1:T})", insert_text_format.Snippet, comp_list)
+
+  gen_completion("stringbuilder", comp_item_kind.Class, "", "stringbuilder", insert_text_format.PlainText, comp_list)
+
+  gen_completion("vector", comp_item_kind.Class, "", "vector(${1:T})", insert_text_format.Snippet, comp_list)
+
+  gen_completion("sequence", comp_item_kind.Class, "", "sequence(${1:T})", insert_text_format.Snippet, comp_list)
+
+  gen_completion("list", comp_item_kind.Class, "", "list(${1:T})", insert_text_format.Snippet, comp_list)
+
+  gen_completion("hashmap", comp_item_kind.Class, "", "hashmap(${1:K},${2:V})", insert_text_format.Snippet, comp_list)
+
+  gen_completion(
+    "ArenaAllocator",
+    comp_item_kind.Class,
+    "",
+    "ArenaAllocator(${1:SIZE},${2:ALIGN})",
+    insert_text_format.Snippet,
+    comp_list
+  )
+
+  gen_completion(
+    "StackAllocator",
+    comp_item_kind.Class,
+    "",
+    "StackAllocator(${1:SIZE},${2:ALIGN})",
+    insert_text_format.Snippet,
+    comp_list
+  )
+
+  gen_completion(
+    "PoolAllocator",
+    comp_item_kind.Class,
+    "",
+    "PoolAllocator(${1:T},${2:SIZE})",
+    insert_text_format.Snippet,
+    comp_list
+  )
+
+  gen_completion(
+    "HeapAllocator",
+    comp_item_kind.Class,
+    "",
+    "HeapAllocator(${1:SIZE})",
+    insert_text_format.Snippet,
+    comp_list
+  )
+end
+
+---@param comp_list CompItem[]
 local function gen_snippets(comp_list)
   gen_completion("if .. then", comp_item_kind.Snippet, "", "if $1 then\n\t\nend", insert_text_format.Snippet, comp_list)
+
+  gen_completion("else .. end", comp_item_kind.Snippet, "", "else\n\t$1\nend", insert_text_format.Snippet, comp_list)
 
   gen_completion("elseif .. then", comp_item_kind.Snippet, "", "elseif $1 then", insert_text_format.Snippet, comp_list)
 
@@ -281,23 +453,25 @@ local function gen_snippets(comp_list)
 end
 
 ---@param scope table
----@param comp_list CompItem[]
-local function gen_symbol_completions(scope, comp_list)
+local function gen_symbols(scope)
   if scope.parent then
-    gen_symbol_completions(scope.parent, comp_list)
+    gen_symbols(scope.parent)
   end
-  local unique_symbols = {}
   for _, symbol in pairs(scope.symbols) do
     local node = symbol.node
     if node then
       if node.is_call then
-        unique_symbols[symbol.attr.name] = symbol
+        symbols[symbol.attr.name] = symbol
       elseif not node.is_ColonIndex and not node.is_DotIndex then
-        unique_symbols[symbol.name] = symbol
+        symbols[symbol.name] = symbol
       end
     end
   end
-  for name, symbol in pairs(unique_symbols) do
+end
+
+---@param comp_list CompItem[]
+local function gen_symbol_completions(comp_list)
+  for name, symbol in pairs(symbols) do
     -- for k, v in pairs(symbol) do
     --   logger.log(tostring(k) .. "  k")
     --   logger.log(tostring(v) .. "  v")
@@ -306,7 +480,6 @@ local function gen_symbol_completions(scope, comp_list)
     local node = symbol.node
     if node then
       if node.attr.ftype then
-        logger.log(node)
         kind = comp_item_kind.Function
       elseif node.is_Id or node.is_IdDecl then
         kind = comp_item_kind.Variable
@@ -334,7 +507,7 @@ return function(request_id, request_params, current_uri, documents, ast_cache)
   local comp_list = {}
   gen_keywords(comp_list)
   gen_snippets(comp_list)
-  gen_builtin_completions(comp_list)
+  gen_builtin_funcs_completions(comp_list)
 
   -- TODO: NOT PERFORMANT
   -- local unique_words = {}
@@ -350,12 +523,51 @@ return function(request_id, request_params, current_uri, documents, ast_cache)
   -- end
   local ast = ast_cache[current_uri]
   if ast then
+    gen_symbols(ast.scope)
     -- for k, v in pairs(ast.scope.parent) do
     --   logger.log(tostring(k) .. "  k")
     --   logger.log(tostring(v) .. "  v")
     -- end
     -- logger.log(ast.scope)
-    gen_symbol_completions(ast.scope, comp_list)
+    if request_params.context and request_params.context.triggerKind == 2 then
+      local trig_char = request_params.context.triggerCharacter
+      if trig_char == "@" or trig_char == "*" then
+        comp_list = {}
+        gen_primitive_types_completions(comp_list)
+        gen_lib_types_completions(comp_list)
+        gen_generic_types_completions(comp_list)
+        for name, symbol in pairs(symbols) do
+          local node = symbol.node
+          if node and tostring(node.attr.type) == "type" then
+            gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
+          end
+        end
+      elseif trig_char == "&" then
+        comp_list = {}
+        for name, symbol in pairs(symbols) do
+          local node = symbol.node
+          if
+            node
+            and (node.is_Id or node.is_IdDecl)
+            and not node.attr.ftype
+            and node.attr.type
+            and not (tostring(node.attr.type) == "type")
+          then
+            gen_completion(name, comp_item_kind.Variable, "", name, insert_text_format.PlainText, comp_list)
+          end
+        end
+      elseif trig_char == "$" then
+        comp_list = {}
+        for name, symbol in pairs(symbols) do
+          local node = symbol.node
+          if node and node.attr.type and tostring(node.attr.type):match("pointer%(") and not node.attr.ftype then
+            gen_completion(name, comp_item_kind.Variable, "", name, insert_text_format.PlainText, comp_list)
+          end
+        end
+      end
+    else
+      gen_symbol_completions(comp_list)
+    end
     response.completion(request_id, comp_list)
     return ast
   else

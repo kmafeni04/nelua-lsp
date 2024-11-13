@@ -3,7 +3,6 @@ local json = require("utils.json")
 local switch = require("lib.switch")
 local server = require("server")
 local logger = require("utils.logger")
-local analyze_ast = require("utils.analyze_ast")
 
 logger.init()
 
@@ -27,7 +26,7 @@ while true do
   local request, err = json.decode(content)
 
   if request then
-    if request.params.textDocument then
+    if request.params and request.params.textDocument then
       current_uri = request.params.textDocument.uri
       current_file_path = current_uri:sub(#"file://" + 1)
     end
@@ -89,6 +88,7 @@ while true do
       end,
       ["textDocument/didClose"] = function()
         documents[current_uri] = nil
+        ast_cache[current_uri] = nil
       end,
       ["shutdown"] = function()
         server.shutdown()
