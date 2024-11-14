@@ -23,13 +23,12 @@ function server.did_open(current_file_path)
   return current_file
 end
 
----@param documents table<string, string>
 ---@param current_file string
 ---@param current_file_path string
 ---@param current_uri string
 ---@return table? ast
-function server.diagnostic(documents, current_file, current_file_path, current_uri)
-  return diagnostic(documents, current_file, current_file_path, current_uri)
+function server.diagnostic(current_file, current_file_path, current_uri)
+  return diagnostic(current_file, current_file_path, current_uri)
 end
 
 ---@param documents table<string, string>
@@ -47,19 +46,19 @@ end
 ---@param request_id integer
 ---@param request_params table
 ---@param current_uri string
----@param documents table<string, string>
+---@param current_file string
 ---@param ast_cache table<string, table>
-function server.completion(request_id, request_params, current_uri, documents, ast_cache)
-  return completion(request_id, request_params, current_uri, documents, ast_cache)
+function server.completion(request_id, request_params, current_uri, current_file, ast_cache)
+  return completion(request_id, request_params, current_uri, current_file, ast_cache)
 end
 
 ---@param request_id integer
 ---@param current_file string
----@param current_file_path string
 ---@param current_line integer
 ---@param current_char integer
-function server.hover(request_id, current_file, current_file_path, current_line, current_char)
-  hover(request_id, current_file, current_file_path, current_line, current_char)
+---@param ast? table
+function server.hover(request_id, current_file, current_line, current_char, ast)
+  hover(request_id, current_file, current_line, current_char, ast)
 end
 
 ---@param request_id integer
@@ -69,6 +68,7 @@ end
 ---@param current_file_path string
 ---@param current_line integer
 ---@param current_char integer
+---@param ast? table
 function server.definition(
   request_id,
   root_path,
@@ -76,9 +76,10 @@ function server.definition(
   current_file,
   current_file_path,
   current_line,
-  current_char
+  current_char,
+  ast
 )
-  definition(request_id, root_path, documents, current_file, current_file_path, current_line, current_char)
+  definition(request_id, root_path, documents, current_file, current_file_path, current_line, current_char, ast)
 end
 
 function server.shutdown()

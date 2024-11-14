@@ -1,6 +1,9 @@
+local switch = require("lib.switch")
+
 local response = require("utils.response")
 local logger = require("utils.logger")
-local analyze_ast = require("utils.analyze_ast")
+local find_nodes = require("utils.find_nodes")
+-- local analyze_ast = require("utils.analyze_ast")
 
 local keywords = {}
 keywords["local"] = true
@@ -221,7 +224,7 @@ local function gen_primitive_types_completions(comp_list)
 
   gen_completion("string", comp_item_kind.Class, "", "string", insert_text_format.PlainText, comp_list)
 
-  gen_completion("Array", comp_item_kind.Snippet, "", "[${1:N}${2:T}]", insert_text_format.Snippet, comp_list)
+  gen_completion("Array", comp_item_kind.Snippet, "", "[${1:N}]${2:T}", insert_text_format.Snippet, comp_list)
 
   gen_completion("enum", comp_item_kind.Class, "", "enum", insert_text_format.PlainText, comp_list)
   gen_completion("enum", comp_item_kind.Snippet, "", "enum{$1}", insert_text_format.Snippet, comp_list)
@@ -271,21 +274,21 @@ end
 
 ---@param comp_list CompItem[]
 local function gen_generic_types_completions(comp_list)
-  gen_completion("span", comp_item_kind.Class, "", "span(${1:T})", insert_text_format.Snippet, comp_list)
+  gen_completion("span", comp_item_kind.Snippet, "", "span(${1:T})", insert_text_format.Snippet, comp_list)
 
-  gen_completion("stringbuilder", comp_item_kind.Class, "", "stringbuilder", insert_text_format.PlainText, comp_list)
+  gen_completion("stringbuilder", comp_item_kind.Snippet, "", "stringbuilder", insert_text_format.PlainText, comp_list)
 
-  gen_completion("vector", comp_item_kind.Class, "", "vector(${1:T})", insert_text_format.Snippet, comp_list)
+  gen_completion("vector", comp_item_kind.Snippet, "", "vector(${1:T})", insert_text_format.Snippet, comp_list)
 
-  gen_completion("sequence", comp_item_kind.Class, "", "sequence(${1:T})", insert_text_format.Snippet, comp_list)
+  gen_completion("sequence", comp_item_kind.Snippet, "", "sequence(${1:T})", insert_text_format.Snippet, comp_list)
 
-  gen_completion("list", comp_item_kind.Class, "", "list(${1:T})", insert_text_format.Snippet, comp_list)
+  gen_completion("list", comp_item_kind.Snippet, "", "list(${1:T})", insert_text_format.Snippet, comp_list)
 
-  gen_completion("hashmap", comp_item_kind.Class, "", "hashmap(${1:K},${2:V})", insert_text_format.Snippet, comp_list)
+  gen_completion("hashmap", comp_item_kind.Snippet, "", "hashmap(${1:K},${2:V})", insert_text_format.Snippet, comp_list)
 
   gen_completion(
     "ArenaAllocator",
-    comp_item_kind.Class,
+    comp_item_kind.Snippet,
     "",
     "ArenaAllocator(${1:SIZE},${2:ALIGN})",
     insert_text_format.Snippet,
@@ -294,7 +297,7 @@ local function gen_generic_types_completions(comp_list)
 
   gen_completion(
     "StackAllocator",
-    comp_item_kind.Class,
+    comp_item_kind.Snippet,
     "",
     "StackAllocator(${1:SIZE},${2:ALIGN})",
     insert_text_format.Snippet,
@@ -303,7 +306,7 @@ local function gen_generic_types_completions(comp_list)
 
   gen_completion(
     "PoolAllocator",
-    comp_item_kind.Class,
+    comp_item_kind.Snippet,
     "",
     "PoolAllocator(${1:T},${2:SIZE})",
     insert_text_format.Snippet,
@@ -312,12 +315,18 @@ local function gen_generic_types_completions(comp_list)
 
   gen_completion(
     "HeapAllocator",
-    comp_item_kind.Class,
+    comp_item_kind.Snippet,
     "",
     "HeapAllocator(${1:SIZE})",
     insert_text_format.Snippet,
     comp_list
   )
+end
+
+local function gen_types(comp_list)
+  gen_primitive_types_completions(comp_list)
+  gen_lib_types_completions(comp_list)
+  gen_generic_types_completions(comp_list)
 end
 
 ---@param comp_list CompItem[]
@@ -469,6 +478,22 @@ local function gen_symbols(scope)
   end
 end
 
+---@param scope table
+local function gen_index_symbols(scope)
+  if scope.parent then
+    gen_index_symbols(scope.parent)
+  end
+  for _, symbol in pairs(scope.symbols) do
+    local node = symbol.node
+    if node then
+      if node.is_ColonIndex or node.is_DotIndex then
+        symbols[symbol.name] = symbol
+        -- logger.log(symbols[symbol.name])
+      end
+    end
+  end
+end
+
 ---@param comp_list CompItem[]
 local function gen_symbol_completions(comp_list)
   for name, symbol in pairs(symbols) do
@@ -499,16 +524,19 @@ end
 ---@param request_id integer
 ---@param request_params table
 ---@param current_uri string
----@param documents table<string, string>
+---@param current_file string
 ---@param ast_cache table<string, table>
 ---@return table? ast
-return function(request_id, request_params, current_uri, documents, ast_cache)
+return function(request_id, request_params, current_uri, current_file, ast_cache)
+  local current_line = request_params.position.line
+  local current_char = request_params.position.character
+
   ---@type CompItem[]
   local comp_list = {}
   gen_keywords(comp_list)
   gen_snippets(comp_list)
   gen_builtin_funcs_completions(comp_list)
-
+  gen_types(comp_list)
   -- TODO: NOT PERFORMANT
   -- local unique_words = {}
   -- for _, doc in pairs(documents) do
@@ -524,6 +552,7 @@ return function(request_id, request_params, current_uri, documents, ast_cache)
   local ast = ast_cache[current_uri]
   if ast then
     gen_symbols(ast.scope)
+    -- logger.log(#symbols)
     -- for k, v in pairs(ast.scope.parent) do
     --   logger.log(tostring(k) .. "  k")
     --   logger.log(tostring(v) .. "  v")
@@ -531,47 +560,115 @@ return function(request_id, request_params, current_uri, documents, ast_cache)
     -- logger.log(ast.scope)
     if request_params.context and request_params.context.triggerKind == 2 then
       local trig_char = request_params.context.triggerCharacter
-      if trig_char == "@" or trig_char == "*" then
-        comp_list = {}
-        gen_primitive_types_completions(comp_list)
-        gen_lib_types_completions(comp_list)
-        gen_generic_types_completions(comp_list)
-        for name, symbol in pairs(symbols) do
-          local node = symbol.node
-          if node and tostring(node.attr.type) == "type" then
-            gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
+      switch(trig_char, {
+        [{ "@", "*" }] = function()
+          comp_list = {}
+          gen_types(comp_list)
+          for name, symbol in pairs(symbols) do
+            local node = symbol.node
+            if node and node.attr.type.is_type then
+              gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
+            end
           end
-        end
-      elseif trig_char == "&" then
-        comp_list = {}
-        for name, symbol in pairs(symbols) do
-          local node = symbol.node
-          if
-            node
-            and (node.is_Id or node.is_IdDecl)
-            and not node.attr.ftype
-            and node.attr.type
-            and not (tostring(node.attr.type) == "type")
-          then
-            gen_completion(name, comp_item_kind.Variable, "", name, insert_text_format.PlainText, comp_list)
+        end,
+        ["&"] = function()
+          comp_list = {}
+          for name, symbol in pairs(symbols) do
+            local node = symbol.node
+            if node and (node.is_Id or node.is_IdDecl) and not node.attr.ftype and not node.attr.type.is_type then
+              gen_completion(name, comp_item_kind.Variable, "", name, insert_text_format.PlainText, comp_list)
+            end
           end
-        end
-      elseif trig_char == "$" then
-        comp_list = {}
-        for name, symbol in pairs(symbols) do
-          local node = symbol.node
-          if node and node.attr.type and tostring(node.attr.type):match("pointer%(") and not node.attr.ftype then
-            gen_completion(name, comp_item_kind.Variable, "", name, insert_text_format.PlainText, comp_list)
+        end,
+        ["$"] = function()
+          comp_list = {}
+          for name, symbol in pairs(symbols) do
+            local node = symbol.node
+            if node and node.attr.type and node.attr.type.is_pointer then
+              gen_completion(name, comp_item_kind.Variable, "", name, insert_text_format.PlainText, comp_list)
+            end
           end
-        end
-      end
+        end,
+        ["."] = function()
+          comp_list = {}
+          local found_nodes, err = find_nodes(current_file, current_line, current_char - 1, ast)
+          if found_nodes then
+            local last_node = found_nodes[#found_nodes]
+            gen_index_symbols(ast.scope)
+            for name, symbol in pairs(symbols) do
+              local node = symbol.node
+              if node and node.is_DotIndex and last_node.is_Id then
+                if last_node.attr.type.is_type and (name:match("^(.+)%..*$") == tostring(last_node.attr.name)) then
+                  name = name:match("^.+%.(.*)$")
+                  gen_completion(
+                    name,
+                    comp_item_kind.Field,
+                    "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
+                    name,
+                    insert_text_format.PlainText,
+                    comp_list
+                  )
+                elseif
+                  name:match("^(.+)%..*$") == tostring(last_node.attr.type) and not last_node.attr.type.is_string
+                then
+                  name = name:match("^.+%.(.*)$")
+                  gen_completion(
+                    name,
+                    comp_item_kind.Field,
+                    "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
+                    name,
+                    insert_text_format.PlainText,
+                    comp_list
+                  )
+                end
+              end
+            end
+          else
+            logger.log(err)
+          end
+        end,
+        [":"] = function()
+          comp_list = {}
+          local found_nodes, err = find_nodes(current_file, current_line, current_char - 1, ast)
+          if found_nodes then
+            local last_node = found_nodes[#found_nodes]
+            local previous_node = found_nodes[#found_nodes - 1]
+            gen_index_symbols(ast.scope)
+            if previous_node.is_VarDecl then
+              comp_list = {}
+              gen_types(comp_list)
+              for name, symbol in pairs(symbols) do
+                local node = symbol.node
+                if node and node.attr.type.is_type then
+                  gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
+                end
+              end
+            else
+              for name, symbol in pairs(symbols) do
+                local node = symbol.node
+                if node and node.attr.ftype and last_node.is_Id then
+                  if name:match("^(.+)%..*$") == tostring(last_node.attr.type) then
+                    name = name:match("^.+%.(.*)$")
+                    gen_completion(
+                      name,
+                      comp_item_kind.Method,
+                      "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
+                      name,
+                      insert_text_format.PlainText,
+                      comp_list
+                    )
+                  end
+                end
+              end
+            end
+          else
+            logger.log(err)
+          end
+        end,
+      })
     else
       gen_symbol_completions(comp_list)
     end
-    response.completion(request_id, comp_list)
-    return ast
-  else
-    response.completion(request_id, comp_list)
-    return nil
   end
+  response.completion(request_id, comp_list)
 end

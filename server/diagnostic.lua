@@ -80,13 +80,12 @@ local function create_diagnostic(analysis, analysis_match, severity)
   return diagnostic
 end
 
----@param documents table<string, string>
 ---@param current_file string
 ---@param current_file_path string
 ---@param current_uri string
 ---@return table? ast
-return function(documents, current_file, current_file_path, current_uri)
-  current_file = current_file or documents[current_uri]
+return function(current_file, current_file_path, current_uri)
+  current_file = current_file
   local ast, err = analyze_ast(current_file, current_file_path)
   -- for k, v in pairs(err) do
   --   logger.log(tostring(k) .. "  k")
@@ -103,7 +102,7 @@ return function(documents, current_file, current_file_path, current_uri)
       return nil
     else
       notification.diagnostic(current_uri, 0, 0, 0, 0, "", true)
-      return ast
+      return nil
     end
   else
     notification.diagnostic(current_uri, 0, 0, 0, 0, "", true)

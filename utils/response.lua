@@ -48,7 +48,6 @@ function response.completion(request_id, comp_list)
   }
   local encoded_msg, err = json.encode(completion_response)
   if encoded_msg then
-    logger.log(encoded_msg)
     io.write(encoded_msg)
     io.flush()
   else

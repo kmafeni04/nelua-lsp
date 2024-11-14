@@ -46,7 +46,7 @@ while true do
         current_file = request.params.textDocument.text
         documents[current_uri] = current_file
 
-        local ast = server.diagnostic(documents, current_file, current_file_path, current_uri)
+        local ast = server.diagnostic(current_file, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -55,19 +55,19 @@ while true do
         current_file = server.did_change(documents, current_uri, request.params)
         documents[current_uri] = current_file
 
-        local ast = server.diagnostic(documents, current_file, current_file_path, current_uri)
+        local ast = server.diagnostic(current_file, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
       end,
       ["textDocument/didSave"] = function()
-        local ast = server.diagnostic(documents, current_file, current_file_path, current_uri)
+        local ast = server.diagnostic(current_file, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
       end,
       ["textDocument/completion"] = function()
-        local ast = server.completion(request.id, request.params, current_uri, documents, ast_cache)
+        local ast = server.completion(request.id, request.params, current_uri, current_file, ast_cache)
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -76,15 +76,26 @@ while true do
         local current_line = request.params.position.line
         local current_char = request.params.position.character
         current_file = documents[current_uri]
+        local ast = ast_cache[current_uri]
 
-        server.hover(request.id, current_file, current_file_path, current_line, current_char)
+        server.hover(request.id, current_file, current_line, current_char, ast)
       end,
       ["textDocument/definition"] = function()
         local current_line = request.params.position.line
         local current_char = request.params.position.character
         current_file = documents[current_uri]
+        local ast = ast_cache[current_uri]
 
-        server.definition(request.id, root_path, documents, current_file, current_file_path, current_line, current_char)
+        server.definition(
+          request.id,
+          root_path,
+          documents,
+          current_file,
+          current_file_path,
+          current_line,
+          current_char,
+          ast
+        )
       end,
       ["textDocument/didClose"] = function()
         documents[current_uri] = nil
