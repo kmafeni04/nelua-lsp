@@ -17,5 +17,5 @@ This is an early implementation of writing an LSP server the for [nelua](https:/
 
 ## How to Run
 ```sh
-  nelua -L /path/to/nelua-lsp /path/to/nelua-lsp/main.lua
+  nelua -L /path/to/nelua-lsp --script /path/to/nelua-lsp/main.lua
 ```
