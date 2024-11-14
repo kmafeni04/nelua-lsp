@@ -2,6 +2,9 @@
 
 This is an early implementation of writing an LSP server the for [nelua](https://nelua.io) programming language
 
+## Note
+I've only tested this on my machine running arch linux and I'm pretty sure it currently won't work correctly on windows. Please report errors when you discover and if possible help me get it working on windows
+
 ## Goals
 
 - [x] Go to Definition
