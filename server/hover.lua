@@ -16,7 +16,7 @@ return function(request_id, current_file, current_line, current_char, ast)
 
   local content = ""
   if ast then
-    local found_nodes = find_nodes(current_file, current_line, current_char, ast)
+    local found_nodes, err = find_nodes(current_file, current_line, current_char, ast)
 
     if found_nodes then
       local current_node = found_nodes[#found_nodes]
@@ -134,6 +134,8 @@ return function(request_id, current_file, current_line, current_char, ast)
         ss:addmany(current_node[1], "\n```nelua\n", "Type: ", current_node.attr.value, "\n```")
         content = ss:tostring()
       end
+    else
+      logger.log(err)
     end
   end
 

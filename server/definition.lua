@@ -74,7 +74,11 @@ return function(request_id, root_path, documents, current_file, current_file_pat
     local found_nodes, err = find_nodes(current_file, current_line, current_char, ast)
     if found_nodes then
       local current_node = found_nodes[#found_nodes]
-      local previous_node = found_nodes[#found_nodes - 1]
+
+      local previous_node
+      if #found_nodes > 1 then
+        previous_node = found_nodes[#found_nodes - 1]
+      end
       ---@type Loc[]
       locs = {}
       if current_node.is_IdDecl then

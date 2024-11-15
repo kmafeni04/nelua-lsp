@@ -4,6 +4,20 @@ local json = require("utils.json")
 
 local response = {}
 
+---@enum
+local lsp_error_codes = {
+  ParseError = -32700,
+  InvalidRequest = -32600,
+  MethodNotFound = -32601,
+  InvalidParams = -32602,
+  InternalError = -32603,
+  serverErrorStart = -32099,
+  serverErrorEnd = -32000,
+  ServerNotInitialized = -32002,
+  UnknownErrorCode = -32001,
+  RequestFailed = -32803,
+}
+
 ---@param request_id integer
 function response.initialize(request_id)
   local intilaize_response = {
@@ -21,6 +35,7 @@ function response.initialize(request_id)
       name = "nelua_lsp",
       version = "0.0.1",
     },
+    -- error = { code = lsp_error_codes.RequestFailed, message = "Failed to initialize server" },
   }
   local encoded_msg, err = json.encode(intilaize_response)
   if encoded_msg then
@@ -44,7 +59,7 @@ function response.completion(request_id, comp_list)
     jsonrpc = "2.0",
     id = request_id,
     result = comp_list,
-    error = "Failed to create completion list",
+    -- error = { code = lsp_error_codes.RequestFailed, message = "Failed to create completion list" },
   }
   local encoded_msg, err = json.encode(completion_response)
   if encoded_msg then
@@ -64,7 +79,7 @@ function response.hover(request_id, content)
     result = {
       contents = content,
     },
-    error = "Failed to provide hover",
+    -- error = { code = lsp_error_codes.RequestFailed, message = "Failed to provide hover" },
   }
   local encoded_msg, err = json.encode(hover_response)
   if encoded_msg then
@@ -94,11 +109,12 @@ function response.definition(request_id, locs)
     jsonrpc = "2.0",
     id = request_id,
     result = locs or {},
-    error = "No definition found",
+    -- error = { code = lsp_error_codes.RequestFailed, message = "No definition found" },
   }
 
   local encoded_msg, err = json.encode(definition_response)
   if encoded_msg then
+    logger.log(encoded_msg)
     io.write(encoded_msg)
     io.flush()
   else
