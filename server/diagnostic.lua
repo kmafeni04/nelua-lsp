@@ -1,3 +1,4 @@
+-- TODO: Fix diag.uri return from create_diagnostic func
 local analyze_ast = require("utils.analyze_ast")
 local logger = require("utils.logger")
 local notification = require("utils.notification")
@@ -13,11 +14,12 @@ local Severity = {
 ---@param analysis string
 ---@param analysis_match string
 ---@param severity integer
+---@param current_file_path string
 ---@return Diagnsotic
-local function create_diagnostic(analysis, analysis_match, severity)
+local function create_diagnostic(analysis, analysis_match, severity, current_file_path)
   ---@class Diagnsotic
   ---@field severity integer
-  ---@field path string
+  ---@field uri string
   ---@field line integer
   ---@field s_char integer
   ---@field e_char integer
@@ -34,9 +36,10 @@ local function create_diagnostic(analysis, analysis_match, severity)
       if error_len_str then
         error_len = #error_len_str
       end
+      local diag_uri = "file://" .. current_file_path:match("(.+/).*%.nelua") .. diag_path
 
       diagnostic.severity = severity
-      diagnostic.path = diag_path
+      diagnostic.uri = diag_uri
       diagnostic.line = tonumber(diag_line) - 1
       diagnostic.s_char = tonumber(diag_s_char) - 1
       diagnostic.e_char = diagnostic.s_char + error_len
@@ -64,8 +67,9 @@ local function create_diagnostic(analysis, analysis_match, severity)
             error_len = #error_len_str
           end
 
+          local diag_uri = "file://" .. current_file_path:match("(.+/).*%.nelua") .. diag_path
           diagnostic.severity = severity
-          diagnostic.path = diag_path
+          diagnostic.uri = diag_uri
           diagnostic.line = tonumber(diag_line) - 1
           diagnostic.s_char = tonumber(diag_s_char) - 1
           diagnostic.e_char = diagnostic.s_char + error_len
@@ -93,12 +97,18 @@ return function(current_file, current_file_path, current_uri)
   -- end
   if err then
     if err.message:match(":%s*error:") then
-      local diag = create_diagnostic(err.message, "(.-):(%d+):(%d+):%s+error:%s+([^\r\n]+)", Severity.Error)
-      notification.diagnostic(current_uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
+      local diag =
+        create_diagnostic(err.message, "(.-):(%d+):(%d+):%s+error:%s+([^\r\n]+)", Severity.Error, current_file_path)
+      notification.diagnostic(diag.uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
       return nil
     elseif err.message:match(":%s*syntax error:") then
-      local diag = create_diagnostic(err.message, "(.-):(%d+):(%d+):%s+syntax error:%s+([^\r\n]+)", Severity.Error)
-      notification.diagnostic(current_uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
+      local diag = create_diagnostic(
+        err.message,
+        "(.-):(%d+):(%d+):%s+syntax error:%s+([^\r\n]+)",
+        Severity.Error,
+        current_file_path
+      )
+      notification.diagnostic(diag.uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
       return nil
     else
       notification.diagnostic(current_uri, 0, 0, 0, 0, "", true)
