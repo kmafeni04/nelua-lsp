@@ -700,7 +700,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           end
         end,
         ["."] = function()
-          local found_nodes, err = find_nodes(current_file, current_line, current_char - 1, ast)
+          local found_nodes, err = find_nodes(current_file, current_line, current_char - 2, ast)
           if found_nodes then
             local last_node = found_nodes[#found_nodes]
             for name, symbol in pairs(symbols) do
@@ -828,7 +828,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           end
         end,
         [":"] = function()
-          local found_nodes, err = find_nodes(current_file, current_line, current_char - 1, ast)
+          local found_nodes, err = find_nodes(current_file, current_line, current_char - 2, ast)
           if found_nodes then
             local last_node = found_nodes[#found_nodes]
 
@@ -836,7 +836,25 @@ return function(request_id, request_params, current_uri, current_file_path, curr
             if #found_nodes > 1 then
               previous_node = found_nodes[#found_nodes - 1]
             end
-            if
+            logger.log(last_node)
+            if last_node.is_Id or last_node.attr.type and not last_node.is_String then
+              for name, symbol in pairs(symbols) do
+                local node = symbol.node
+                if node and node.attr.ftype then
+                  if name:match("^(.+)%..*$") == tostring(last_node.attr.type) then
+                    name = name:match("^.+%.(.*)$")
+                    gen_completion(
+                      name,
+                      comp_item_kind.Method,
+                      "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
+                      name,
+                      insert_text_format.PlainText,
+                      comp_list
+                    )
+                  end
+                end
+              end
+            elseif
               previous_node
               and (
                 previous_node.is_VarDecl
@@ -849,23 +867,6 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                 local node = symbol.node
                 if node and node.attr.type.is_type then
                   gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
-                end
-              end
-            else
-              for name, symbol in pairs(symbols) do
-                local node = symbol.node
-                if node and node.attr.ftype and last_node.is_Id then
-                  if name:match("^(.+)%..*$") == tostring(last_node.attr.type) then
-                    name = name:match("^.+%.(.*)$")
-                    gen_completion(
-                      name,
-                      comp_item_kind.Method,
-                      "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
-                      name,
-                      insert_text_format.PlainText,
-                      comp_list
-                    )
-                  end
                 end
               end
             end
