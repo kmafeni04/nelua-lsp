@@ -1,5 +1,4 @@
 local logger = require("utils.logger")
-local analyze_ast = require("utils.analyze_ast")
 
 ---@param current_file string
 ---@param current_line integer

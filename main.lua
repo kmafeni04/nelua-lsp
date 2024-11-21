@@ -1,4 +1,4 @@
--- TODO: Work on completions
+-- TODO: Fix Dotindex symbols in completions
 local json = require("utils.json")
 local switch = require("lib.switch")
 local server = require("server")
@@ -67,7 +67,8 @@ while true do
         end
       end,
       ["textDocument/completion"] = function()
-        local ast = server.completion(request.id, request.params, current_uri, current_file, ast_cache)
+        local ast =
+          server.completion(request.id, request.params, current_uri, current_file_path, current_file, ast_cache)
         if ast then
           ast_cache[current_uri] = ast
         end

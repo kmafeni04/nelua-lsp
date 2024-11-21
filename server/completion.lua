@@ -3,7 +3,6 @@ local switch = require("lib.switch")
 local response = require("utils.response")
 local logger = require("utils.logger")
 local find_nodes = require("utils.find_nodes")
--- local analyze_ast = require("utils.analyze_ast")
 
 local keywords = {}
 keywords["local"] = true
@@ -63,6 +62,24 @@ local comp_item_kind = {
   Operator = 24,
   TypeParameter = 25,
 }
+
+---@param current_file string
+---@param current_line integer
+---@param current_char integer
+---@return integer
+local function find_pos(current_file, current_line, current_char)
+  local i = 0
+  local pos = 0
+  for line in current_file:gmatch("[^\r\n]*\r?\n") do
+    if i == current_line then
+      pos = pos + current_char
+      break
+    end
+    i = i + 1
+    pos = pos + #line
+  end
+  return pos + 1
+end
 
 ---@param label string
 ---@param kind CompItemKind
@@ -461,34 +478,25 @@ local function gen_snippets(comp_list)
   )
 end
 
+-- TODO: if symbols have the same name, they will clash
 ---@param scope table
-local function gen_symbols(scope)
+---@param pos integer
+---@param current_file_path string
+local function gen_symbols(scope, pos, current_file_path)
   if scope.parent then
-    gen_symbols(scope.parent)
+    gen_symbols(scope.parent, pos, current_file_path)
   end
-  for _, symbol in pairs(scope.symbols) do
+  for _, symbol in ipairs(scope.symbols) do
     local node = symbol.node
-    if node then
-      if node.is_call then
-        symbols[symbol.attr.name] = symbol
-      elseif not node.is_ColonIndex and not node.is_DotIndex then
+    if node and ((node._astnode and node.pos and pos >= node.pos) or node.src.name ~= current_file_path) then
+      if not node.is_ColonIndex and not node.is_DotIndex then
+        if node.attr.ftype then
+          symbols[symbol.name] = symbol
+        else
+          symbols[node.attr.name] = symbol
+        end
+      elseif (node.is_ColonIndex or node.is_DotIndex) and not node.attr.name:match("^[%w_]+%(") then
         symbols[symbol.name] = symbol
-      end
-    end
-  end
-end
-
----@param scope table
-local function gen_index_symbols(scope)
-  if scope.parent then
-    gen_index_symbols(scope.parent)
-  end
-  for _, symbol in pairs(scope.symbols) do
-    local node = symbol.node
-    if node then
-      if node.is_ColonIndex or node.is_DotIndex then
-        symbols[symbol.name] = symbol
-        -- logger.log(symbols[symbol.name])
       end
     end
   end
@@ -524,15 +532,18 @@ end
 ---@param request_id integer
 ---@param request_params table
 ---@param current_uri string
+---@param current_file_path string
 ---@param current_file string
 ---@param ast_cache table<string, table>
 ---@return table? ast
-return function(request_id, request_params, current_uri, current_file, ast_cache)
+return function(request_id, request_params, current_uri, current_file_path, current_file, ast_cache)
   local current_line = request_params.position.line
   local current_char = request_params.position.character
 
+  symbols = {}
   ---@type CompItem[]
   local comp_list = {}
+
   gen_keywords(comp_list)
   gen_snippets(comp_list)
   gen_builtin_funcs_completions(comp_list)
@@ -551,18 +562,119 @@ return function(request_id, request_params, current_uri, current_file, ast_cache
   -- end
   local ast = ast_cache[current_uri]
   if ast then
-    gen_symbols(ast.scope)
-    -- logger.log(#symbols)
-    -- for k, v in pairs(ast.scope.parent) do
-    --   logger.log(tostring(k) .. "  k")
-    --   logger.log(tostring(v) .. "  v")
-    -- end
-    -- logger.log(ast.scope)
+    local pos = find_pos(current_file, current_line, current_char)
+    gen_symbols(ast.scope, pos, current_file_path)
+    local found_nodes = find_nodes(current_file, current_line, current_char, ast)
+    if found_nodes then
+      for _, node in pairs(found_nodes) do
+        if node.scope then
+          gen_symbols(node.scope, pos, current_file_path)
+        end
+      end
+    end
+    -- Field completions
+    for name, symbol in pairs(symbols) do
+      local node = symbol.node
+      if node then
+        if node.attr.type.is_type and node.attr.scope then
+          for _, block in pairs(node.attr.scope.node) do
+            if type(block) == "table" and block.is_VarDecl then
+              for _, block_children in ipairs(block) do
+                if type(block_children) == "table" then
+                  for _, field in ipairs(block_children) do
+                    if
+                      type(field) == "table"
+                      and field.is_Type
+                      and field.attr
+                      and tostring(field.attr.value) == node.attr.name
+                    then
+                      for _, field_type in ipairs(field) do
+                        if field_type.is_EnumType then
+                          for _, field_type_field in ipairs(field_type) do
+                            if type(field_type_field) == "table" then
+                              for _, enum_field in pairs(field_type_field) do
+                                gen_completion(
+                                  name .. "." .. enum_field[1],
+                                  comp_item_kind.Field,
+                                  "```nelua\nType: int64\n```",
+                                  name .. "." .. enum_field[1],
+                                  insert_text_format.PlainText,
+                                  comp_list
+                                )
+                              end
+                            end
+                          end
+                          break
+                        end
+                      end
+                      break
+                    end
+                  end
+                end
+              end
+            end
+          end
+        elseif
+          node[2]
+          and (type(node[2]) == "table")
+          and node[2].is_Id
+          and node[2].attr.type.is_type
+          and node[2].attr.node
+        then
+          for _, block in pairs(node[2].attr.node.attr.scope.node) do
+            if type(block) == "table" and block.is_VarDecl then
+              for _, block_children in ipairs(block) do
+                if type(block_children) == "table" then
+                  for _, field in ipairs(block_children) do
+                    if
+                      type(field) == "table"
+                      and field.is_Type
+                      and field.attr
+                      and tostring(field.attr.value) == node[2].attr.name
+                    then
+                      for _, field_type in ipairs(field) do
+                        if field_type.is_RecordType then
+                          for _, field_type_field in ipairs(field_type) do
+                            gen_completion(
+                              name .. "." .. field_type_field[1],
+                              comp_item_kind.Field,
+                              "```nelua\nType: " .. tostring(field_type_field.attr.value) .. "\n```",
+                              name .. "." .. field_type_field[1],
+                              insert_text_format.PlainText,
+                              comp_list
+                            )
+                          end
+                          break
+                        elseif field_type.is_UnionType then
+                          for _, field_type_field in ipairs(field_type) do
+                            gen_completion(
+                              name .. "." .. field_type_field[1],
+                              comp_item_kind.Field,
+                              "```nelua\nType: " .. tostring(field_type_field.attr.value) .. "\n```",
+                              name .. "." .. field_type_field[1],
+                              insert_text_format.PlainText,
+                              comp_list
+                            )
+                          end
+                          break
+                        end
+                      end
+                      break
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
     if request_params.context and request_params.context.triggerKind == 2 then
       local trig_char = request_params.context.triggerCharacter
+      comp_list = {}
       switch(trig_char, {
         [{ "@", "*" }] = function()
-          comp_list = {}
           gen_types(comp_list)
           for name, symbol in pairs(symbols) do
             local node = symbol.node
@@ -572,7 +684,6 @@ return function(request_id, request_params, current_uri, current_file, ast_cache
           end
         end,
         ["&"] = function()
-          comp_list = {}
           for name, symbol in pairs(symbols) do
             local node = symbol.node
             if node and (node.is_Id or node.is_IdDecl) and not node.attr.ftype and not node.attr.type.is_type then
@@ -581,7 +692,6 @@ return function(request_id, request_params, current_uri, current_file, ast_cache
           end
         end,
         ["$"] = function()
-          comp_list = {}
           for name, symbol in pairs(symbols) do
             local node = symbol.node
             if node and node.attr.type and node.attr.type.is_pointer then
@@ -590,36 +700,126 @@ return function(request_id, request_params, current_uri, current_file, ast_cache
           end
         end,
         ["."] = function()
-          comp_list = {}
           local found_nodes, err = find_nodes(current_file, current_line, current_char - 1, ast)
           if found_nodes then
             local last_node = found_nodes[#found_nodes]
-            gen_index_symbols(ast.scope)
             for name, symbol in pairs(symbols) do
               local node = symbol.node
-              if node and node.is_DotIndex and last_node.is_Id then
-                if last_node.attr.type.is_type and (name:match("^(.+)%..*$") == tostring(last_node.attr.name)) then
-                  name = name:match("^.+%.(.*)$")
-                  gen_completion(
-                    name,
-                    comp_item_kind.Field,
-                    "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
-                    name,
-                    insert_text_format.PlainText,
-                    comp_list
-                  )
+              if node then
+                if node.is_DotIndex and last_node.is_Id then
+                  if last_node.attr.type.is_type and (name:match("^(.+)%..*$") == tostring(last_node.attr.name)) then
+                    name = name:match("^.+%.(.*)$")
+                    gen_completion(
+                      name,
+                      comp_item_kind.Function,
+                      "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
+                      name,
+                      insert_text_format.PlainText,
+                      comp_list
+                    )
+                  elseif
+                    name:match("^(.+)%..*$") == tostring(last_node.attr.type) and not last_node.attr.type.is_string
+                  then
+                    name = name:match("^.+%.(.*)$")
+                    gen_completion(
+                      name,
+                      comp_item_kind.Field,
+                      "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
+                      name,
+                      insert_text_format.PlainText,
+                      comp_list
+                    )
+                  end
+                elseif node.attr.type.is_type and node.attr.scope then
+                  for _, block in pairs(node.attr.scope.node) do
+                    if type(block) == "table" and block.is_VarDecl then
+                      for _, block_children in ipairs(block) do
+                        if type(block_children) == "table" then
+                          for _, field in ipairs(block_children) do
+                            if
+                              type(field) == "table"
+                              and field.is_Type
+                              and field.attr
+                              and tostring(field.attr.value) == node.attr.name
+                            then
+                              for _, field_type in ipairs(field) do
+                                if field_type.is_EnumType then
+                                  for _, field_type_field in ipairs(field_type) do
+                                    if type(field_type_field) == "table" then
+                                      for _, enum_field in pairs(field_type_field) do
+                                        gen_completion(
+                                          enum_field[1],
+                                          comp_item_kind.Field,
+                                          "```nelua\nType: int64\n```",
+                                          enum_field[1],
+                                          insert_text_format.PlainText,
+                                          comp_list
+                                        )
+                                      end
+                                    end
+                                  end
+                                  break
+                                end
+                              end
+                              break
+                            end
+                          end
+                        end
+                      end
+                    end
+                  end
                 elseif
-                  name:match("^(.+)%..*$") == tostring(last_node.attr.type) and not last_node.attr.type.is_string
+                  node[2]
+                  and (type(node[2]) == "table")
+                  and node[2].is_Id
+                  and node[2].attr.type.is_type
+                  and node[2].attr.node
                 then
-                  name = name:match("^.+%.(.*)$")
-                  gen_completion(
-                    name,
-                    comp_item_kind.Field,
-                    "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
-                    name,
-                    insert_text_format.PlainText,
-                    comp_list
-                  )
+                  for _, block in pairs(node[2].attr.node.attr.scope.node) do
+                    if type(block) == "table" and block.is_VarDecl then
+                      for _, block_children in ipairs(block) do
+                        if type(block_children) == "table" then
+                          for _, field in ipairs(block_children) do
+                            if
+                              type(field) == "table"
+                              and field.is_Type
+                              and field.attr
+                              and tostring(field.attr.value) == node[2].attr.name
+                            then
+                              for _, field_type in ipairs(field) do
+                                if field_type.is_RecordType then
+                                  for _, field_type_field in ipairs(field_type) do
+                                    gen_completion(
+                                      field_type_field[1],
+                                      comp_item_kind.Field,
+                                      "```nelua\nType: " .. tostring(field_type_field.attr.value) .. "\n```",
+                                      field_type_field[1],
+                                      insert_text_format.PlainText,
+                                      comp_list
+                                    )
+                                  end
+                                  break
+                                elseif field_type.is_UnionType then
+                                  for _, field_type_field in ipairs(field_type) do
+                                    gen_completion(
+                                      field_type_field[1],
+                                      comp_item_kind.Field,
+                                      "```nelua\nType: " .. tostring(field_type_field.attr.value) .. "\n```",
+                                      field_type_field[1],
+                                      insert_text_format.PlainText,
+                                      comp_list
+                                    )
+                                  end
+                                  break
+                                end
+                              end
+                              break
+                            end
+                          end
+                        end
+                      end
+                    end
+                  end
                 end
               end
             end
@@ -628,14 +828,22 @@ return function(request_id, request_params, current_uri, current_file, ast_cache
           end
         end,
         [":"] = function()
-          comp_list = {}
           local found_nodes, err = find_nodes(current_file, current_line, current_char - 1, ast)
           if found_nodes then
             local last_node = found_nodes[#found_nodes]
-            local previous_node = found_nodes[#found_nodes - 1]
-            gen_index_symbols(ast.scope)
-            if previous_node.is_VarDecl then
-              comp_list = {}
+
+            local previous_node
+            if #found_nodes > 1 then
+              previous_node = found_nodes[#found_nodes - 1]
+            end
+            if
+              previous_node
+              and (
+                previous_node.is_VarDecl
+                or previous_node.is_RecordType
+                or (previous_node[1] and previous_node[1].is_RecordType)
+              )
+            then
               gen_types(comp_list)
               for name, symbol in pairs(symbols) do
                 local node = symbol.node
