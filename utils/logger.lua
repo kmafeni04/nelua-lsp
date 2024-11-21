@@ -22,10 +22,11 @@ if arg[1] == "DEBUG" then
     local logged_file = debug.getinfo(2).source
     local line = debug.getinfo(2).currentline
     local msgs = { ... }
+    local msgs_no_nil = {}
     for i, v in ipairs(msgs) do
-      msgs[i] = tostring(v)
+      msgs_no_nil[i] = tostring(v)
     end
-    local msg = table.concat(msgs, ", ")
+    local msg = table.concat(msgs_no_nil, ", ")
     assert(log_file):write(interp("[nelua_lsp] {{date}} {{time}} {{logged_file}}:{{line}}: {{msg}}\n"))
     assert(log_file):close()
   end
