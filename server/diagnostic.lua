@@ -111,7 +111,7 @@ return function(current_file, current_file_path, current_uri)
       notification.diagnostic(diag.uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
       return nil
     else
-      notification.diagnostic(current_uri, 0, 0, 0, 0, "", true)
+      notification.diagnostic(current_uri, 0, 0, 1, Severity.Error, "There is an unknown error", false)
       return nil
     end
   else

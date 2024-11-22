@@ -4,27 +4,32 @@ local response = require("utils.response")
 local logger = require("utils.logger")
 local find_nodes = require("utils.find_nodes")
 
-local keywords = {}
-keywords["local"] = true
-keywords["global"] = true
-keywords["function"] = true
-keywords["nil"] = true
-keywords["true"] = true
-keywords["false"] = true
-keywords["for"] = true
-keywords["if"] = true
-keywords["elseif"] = true
-keywords["else"] = true
-keywords["while"] = true
-keywords["do"] = true
-keywords["end"] = true
-keywords["in"] = true
-keywords["then"] = true
-keywords["not"] = true
-keywords["defer"] = true
-keywords["break"] = true
-keywords["fallthrough"] = true
-keywords["switch"] = true
+local keywords = {
+  ["local"] = true,
+  ["global"] = true,
+  ["function"] = true,
+  ["nil"] = true,
+  ["true"] = true,
+  ["false"] = true,
+  ["for"] = true,
+  ["if"] = true,
+  ["elseif"] = true,
+  ["else"] = true,
+  ["while"] = true,
+  ["do"] = true,
+  ["end"] = true,
+  ["in"] = true,
+  ["then"] = true,
+  ["not"] = true,
+  ["defer"] = true,
+  ["or"] = true,
+  ["break"] = true,
+  ["fallthrough"] = true,
+  ["switch"] = true,
+  ["repeat"] = true,
+  ["until"] = true,
+  ["return"] = true,
+}
 
 local symbols = {}
 
@@ -107,7 +112,7 @@ local function gen_keywords(comp_list)
 end
 
 ---@param comp_list CompItem[]
-local function gen_builtin_funcs_completions(comp_list)
+local function gen_builtin_funcs(comp_list)
   gen_completion(
     "require",
     comp_item_kind.Function,
@@ -176,6 +181,8 @@ end
 
 ---@param comp_list CompItem[]
 local function gen_primitive_types_completions(comp_list)
+  gen_completion("auto", comp_item_kind.Class, "", "auto", insert_text_format.PlainText, comp_list)
+
   gen_completion("boolean", comp_item_kind.Class, "", "boolean", insert_text_format.PlainText, comp_list)
 
   gen_completion("number", comp_item_kind.Class, "", "number", insert_text_format.PlainText, comp_list)
@@ -495,7 +502,11 @@ local function gen_symbols(scope, pos, current_file_path)
         else
           symbols[node.attr.name] = symbol
         end
-      elseif (node.is_ColonIndex or node.is_DotIndex) and not node.attr.name:match("^[%w_]+%(") then
+      elseif
+        (node.is_ColonIndex or node.is_DotIndex)
+        and not node.attr.name:match("^[%w_]+%(") -- Generics
+        and not node.attr.name:match("^[%w_]+T%.") -- Generics
+      then
         symbols[symbol.name] = symbol
       end
     end
@@ -546,18 +557,16 @@ return function(request_id, request_params, current_uri, current_file_path, curr
 
   gen_keywords(comp_list)
   gen_snippets(comp_list)
-  gen_builtin_funcs_completions(comp_list)
+  gen_builtin_funcs(comp_list)
   gen_types(comp_list)
   -- TODO: NOT PERFORMANT
-  -- local unique_words = {}
+  -- local mark = {}
   -- for _, doc in pairs(documents) do
   --   for word in doc:gmatch("%f[%w_][%w_]+%f[^%w_]") do
-  --     unique_words[word] = true
-  --   end
-  -- end
-  -- for word in pairs(unique_words) do
-  --   if not keywords[word] then
-  --     gen_completion(word, comp_item_kind.Text, "", insert_text_format.PlainText, comp_list)
+  --     if not mark[word] then
+  --       mark[word] = true
+  --       gen_completion(word, comp_item_kind.Text, "", word, insert_text_format.PlainText)
+  --     end
   --   end
   -- end
   local ast = ast_cache[current_uri]
@@ -595,7 +604,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                               for _, enum_field in pairs(field_type_field) do
                                 gen_completion(
                                   name .. "." .. enum_field[1],
-                                  comp_item_kind.Field,
+                                  comp_item_kind.Enum,
                                   "```nelua\nType: int64\n```",
                                   name .. "." .. enum_field[1],
                                   insert_text_format.PlainText,
@@ -700,6 +709,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           end
         end,
         ["."] = function()
+          ---@diagnostic disable-next-line: redefined-local
           local found_nodes, err = find_nodes(current_file, current_line, current_char - 2, ast)
           if found_nodes then
             local last_node = found_nodes[#found_nodes]
@@ -749,7 +759,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                                       for _, enum_field in pairs(field_type_field) do
                                         gen_completion(
                                           enum_field[1],
-                                          comp_item_kind.Field,
+                                          comp_item_kind.EnumMember,
                                           "```nelua\nType: int64\n```",
                                           enum_field[1],
                                           insert_text_format.PlainText,
@@ -831,13 +841,13 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           local found_nodes, err = find_nodes(current_file, current_line, current_char - 2, ast)
           if found_nodes then
             local last_node = found_nodes[#found_nodes]
-
+            logger.log(last_node)
             local previous_node
             if #found_nodes > 1 then
               previous_node = found_nodes[#found_nodes - 1]
+              logger.log(previous_node)
             end
-            logger.log(last_node)
-            if last_node.is_Id or last_node.attr.type and not last_node.is_String then
+            if last_node.attr.type and not last_node.is_String and not (previous_node and previous_node.is_VarDecl) then
               for name, symbol in pairs(symbols) do
                 local node = symbol.node
                 if node and node.attr.ftype then
