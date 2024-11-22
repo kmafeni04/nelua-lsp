@@ -1,10 +1,10 @@
 local logger = require("utils.logger")
 
-local json = require("utils.json")
+local rpc = require("utils.rpc")
 
 local response = {}
 
----@enum
+---@enum LspErrorCodes
 local lsp_error_codes = {
   ParseError = -32700,
   InvalidRequest = -32600,
@@ -37,7 +37,7 @@ function response.initialize(request_id)
     },
     -- error = { code = lsp_error_codes.RequestFailed, message = "Failed to initialize server" },
   }
-  local encoded_msg, err = json.encode(intilaize_response)
+  local encoded_msg, err = rpc.encode(intilaize_response)
   if encoded_msg then
     io.write(encoded_msg)
     io.flush()
@@ -61,7 +61,7 @@ function response.completion(request_id, comp_list)
     result = comp_list,
     -- error = { code = lsp_error_codes.RequestFailed, message = "Failed to create completion list" },
   }
-  local encoded_msg, err = json.encode(completion_response)
+  local encoded_msg, err = rpc.encode(completion_response)
   if encoded_msg then
     io.write(encoded_msg)
     io.flush()
@@ -81,7 +81,7 @@ function response.hover(request_id, content)
     },
     -- error = { code = lsp_error_codes.RequestFailed, message = "Failed to provide hover" },
   }
-  local encoded_msg, err = json.encode(hover_response)
+  local encoded_msg, err = rpc.encode(hover_response)
   if encoded_msg then
     io.write(encoded_msg)
     io.flush()
@@ -112,7 +112,7 @@ function response.definition(request_id, locs)
     -- error = { code = lsp_error_codes.RequestFailed, message = "No definition found" },
   }
 
-  local encoded_msg, err = json.encode(definition_response)
+  local encoded_msg, err = rpc.encode(definition_response)
   if encoded_msg then
     logger.log(encoded_msg)
     io.write(encoded_msg)
@@ -125,7 +125,7 @@ end
 function response.shutdown()
   local shutdown_response = { result = {} }
 
-  local encoded_msg, err = json.encode(shutdown_response)
+  local encoded_msg, err = rpc.encode(shutdown_response)
   if encoded_msg then
     io.write(encoded_msg)
     io.flush()

@@ -1,5 +1,7 @@
 -- TODO: Fix Dotindex symbols in completions
-local json = require("utils.json")
+-- TODO: If workspace folder is provided, use that instead of the git root path
+
+local rpc = require("utils.rpc")
 local switch = require("lib.switch")
 local server = require("server")
 local logger = require("utils.logger")
@@ -23,7 +25,7 @@ while true do
   _ = io.read("L")
   ---@type string
   local content = io.read(content_length)
-  local request, err = json.decode(content)
+  local request, err = rpc.decode(content)
 
   if request then
     if request.params and request.params.textDocument then

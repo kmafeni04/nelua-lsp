@@ -1,4 +1,4 @@
-local json = require("utils.json")
+local rpc = require("utils.rpc")
 local logger = require("utils.logger")
 
 local notification = {}
@@ -31,7 +31,7 @@ function notification.diagnostic(current_uri, line, start_char, end_char, severi
   if clear then
     diagnostic_notif.params.diagnostics[1] = nil
   end
-  local encoded_notif, err = json.encode(diagnostic_notif)
+  local encoded_notif, err = rpc.encode(diagnostic_notif)
   if encoded_notif then
     io.write(encoded_notif)
     io.flush()
