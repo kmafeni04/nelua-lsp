@@ -842,12 +842,15 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           if found_nodes then
             local last_node = found_nodes[#found_nodes]
             logger.log(last_node)
-            local previous_node
-            if #found_nodes > 1 then
-              previous_node = found_nodes[#found_nodes - 1]
-              logger.log(previous_node)
-            end
-            if last_node.attr.type and not last_node.is_String and not (previous_node and previous_node.is_VarDecl) then
+            if last_node.is_IdDecl or last_node.is_RecordType or last_node.is_UnionType then
+              gen_types(comp_list)
+              for name, symbol in pairs(symbols) do
+                local node = symbol.node
+                if node and node.attr.type.is_type then
+                  gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
+                end
+              end
+            elseif last_node.attr.type then
               for name, symbol in pairs(symbols) do
                 local node = symbol.node
                 if node and node.attr.ftype then
@@ -862,21 +865,6 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                       comp_list
                     )
                   end
-                end
-              end
-            elseif
-              previous_node
-              and (
-                previous_node.is_VarDecl
-                or previous_node.is_RecordType
-                or (previous_node[1] and previous_node[1].is_RecordType)
-              )
-            then
-              gen_types(comp_list)
-              for name, symbol in pairs(symbols) do
-                local node = symbol.node
-                if node and node.attr.type.is_type then
-                  gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
                 end
               end
             end
