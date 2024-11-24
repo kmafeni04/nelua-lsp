@@ -34,6 +34,7 @@ local keywords = {
 }
 
 local symbols = {}
+local SYMBOL_NAME_MATCH <const> = "^(.+)//.*$"
 
 ---@enum InsertTextFormat
 local insert_text_format = {
@@ -487,7 +488,6 @@ local function gen_snippets(comp_list)
   )
 end
 
--- TODO: if symbols have the same name, they will clash
 ---@param scope table
 ---@param pos integer
 ---@param current_file_path string
@@ -511,7 +511,6 @@ local function gen_symbols(scope, pos, current_file_path)
       }
     end
     local node = symbol.node
-    logger.log(symbol.name, node.pos, pos)
     if
       node and ((node._astnode and node.pos and pos >= node.pos) or (node.src and node.src.name ~= current_file_path))
     then
@@ -519,9 +518,10 @@ local function gen_symbols(scope, pos, current_file_path)
         not node.attr.name:match("^[%w_]+%(") and not node.attr.name:match("^[%w_]+T%.") -- Generics
       then
         if node.attr.ftype then
-          symbols[symbol.name] = symbol
+          -- Concatenated with type to avoid clashes of the same name
+          symbols[symbol.name .. "//" .. tostring(node.attr.type)] = symbol
         else
-          symbols[node.attr.name] = symbol
+          symbols[node.attr.name .. "//" .. tostring(node.attr.type)] = symbol
         end
       end
     end
@@ -530,7 +530,8 @@ end
 
 ---@param comp_list CompItem[]
 local function gen_symbol_completions(comp_list)
-  for name, symbol in pairs(symbols) do
+  for key, symbol in pairs(symbols) do
+    local name = key:match(SYMBOL_NAME_MATCH)
     local kind = comp_item_kind.Variable
     local node = symbol.node
     if node then
@@ -587,6 +588,12 @@ return function(request_id, request_params, current_uri, current_file_path, curr
       for _, node in pairs(found_nodes) do
         if node.scope then
           gen_symbols(node.scope, pos, current_file_path)
+        elseif node.attr and node.attr.name and not symbols[node.attr.name .. "//" .. tostring(node.attr.type)] then
+          symbols[node.attr.name .. "//" .. tostring(node.attr.type)] = {
+            node = node,
+            name = node.attr.name,
+            type = node.attr.type,
+          }
         end
       end
       -- local current_node = found_nodes[#found_nodes]
@@ -596,7 +603,8 @@ return function(request_id, request_params, current_uri, current_file_path, curr
       -- end
     end
     -- Field completions
-    for name, symbol in pairs(symbols) do
+    for key, symbol in pairs(symbols) do
+      local name = key:match(SYMBOL_NAME_MATCH)
       local node = symbol.node
       if node then
         if node.attr.type.is_type and node.attr.scope then
@@ -699,7 +707,8 @@ return function(request_id, request_params, current_uri, current_file_path, curr
       switch(trig_char, {
         [{ "@", "*" }] = function()
           gen_types(comp_list)
-          for name, symbol in pairs(symbols) do
+          for key, symbol in pairs(symbols) do
+            local name = key:match(SYMBOL_NAME_MATCH)
             local node = symbol.node
             if node and node.attr.type.is_type then
               gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
@@ -707,7 +716,8 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           end
         end,
         ["&"] = function()
-          for name, symbol in pairs(symbols) do
+          for key, symbol in pairs(symbols) do
+            local name = key:match(SYMBOL_NAME_MATCH)
             local node = symbol.node
             if node and (node.is_Id or node.is_IdDecl) and not node.attr.ftype and not node.attr.type.is_type then
               gen_completion(
@@ -722,7 +732,8 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           end
         end,
         ["$"] = function()
-          for name, symbol in pairs(symbols) do
+          for key, symbol in pairs(symbols) do
+            local name = key:match(SYMBOL_NAME_MATCH)
             local node = symbol.node
             if node and node.attr.type and node.attr.type.is_pointer then
               gen_completion(
@@ -741,7 +752,8 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           local found_nodes, err = find_nodes(current_file, current_line, current_char - 2, ast)
           if found_nodes then
             local last_node = found_nodes[#found_nodes]
-            for name, symbol in pairs(symbols) do
+            for key, symbol in pairs(symbols) do
+              local name = key:match(SYMBOL_NAME_MATCH)
               local node = symbol.node
               if node then
                 if node.is_DotIndex and last_node.is_Id then
@@ -872,14 +884,16 @@ return function(request_id, request_params, current_uri, current_file_path, curr
             logger.log(last_node)
             if last_node.is_IdDecl or last_node.is_RecordType or last_node.is_UnionType then
               gen_types(comp_list)
-              for name, symbol in pairs(symbols) do
+              for key, symbol in pairs(symbols) do
+                local name = key:match(SYMBOL_NAME_MATCH)
                 local node = symbol.node
                 if node and node.attr.type.is_type then
                   gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
                 end
               end
             elseif last_node.attr.type then
-              for name, symbol in pairs(symbols) do
+              for key, symbol in pairs(symbols) do
+                local name = key:match(SYMBOL_NAME_MATCH)
                 local node = symbol.node
                 if node and node.attr.ftype then
                   if name:match("^(.+)%..*$") == tostring(last_node.attr.type) then
