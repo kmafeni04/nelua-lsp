@@ -162,6 +162,14 @@ return function(request_id, root_path, documents, current_file, current_file_pat
             logger.log(git_err)
           end
         end
+      elseif current_node.is_Label then
+        local target_node = current_node
+        target_node.attr.name = "::" .. current_node[1] .. "::"
+        add_new_definition(documents, target_node, locs)
+      elseif current_node.is_Goto then
+        local target_node = current_node.attr.label.node
+        target_node.attr.name = "::" .. current_node[1] .. "::"
+        add_new_definition(documents, target_node, locs)
       elseif current_node.is_call then
         local target_node = current_node.attr.calleesym.node
         -- NOTE: location starts from . so add it to properly calculate name length
