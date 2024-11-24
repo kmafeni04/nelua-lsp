@@ -1,5 +1,3 @@
--- TODO: Dot completions happen for function fields and even fields of themseleves, e.g self.data. will show data again
-
 local switch = require("lib.switch")
 
 local response = require("utils.response")
@@ -588,6 +586,21 @@ return function(request_id, request_params, current_uri, current_file_path, curr
       for _, node in pairs(found_nodes) do
         if node.scope then
           gen_symbols(node.scope, pos, current_file_path)
+        elseif node.is_Do then
+          -- for loop variables
+          local loop_nodes = node[1][2][2][1][2]
+          for _, loop_node in pairs(loop_nodes) do
+            if
+              not loop_node.attr.name:match("^__.*")
+              and not symbols[loop_node.attr.name .. "//" .. tostring(loop_node.attr.type)]
+            then
+              symbols[loop_node.attr.name .. "//" .. tostring(loop_node.attr.type)] = {
+                node = loop_node,
+                name = loop_node.attr.name,
+                type = loop_node.attr.type,
+              }
+            end
+          end
         elseif node.attr and node.attr.name and not symbols[node.attr.name .. "//" .. tostring(node.attr.type)] then
           symbols[node.attr.name .. "//" .. tostring(node.attr.type)] = {
             node = node,
@@ -635,10 +648,9 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                               end
                             end
                           end
-                          break
+                          goto OUT_OF_FIELD
                         end
                       end
-                      break
                     end
                   end
                 end
@@ -651,6 +663,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           and node[2].is_Id
           and node[2].attr.type.is_type
           and node[2].attr.node
+          and not node.attr.ftype
         then
           for _, block in pairs(node[2].attr.node.attr.scope.node) do
             if type(block) == "table" and block.is_VarDecl then
@@ -675,7 +688,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                               comp_list
                             )
                           end
-                          break
+                          goto OUT_OF_FIELD
                         elseif field_type.is_UnionType then
                           for _, field_type_field in ipairs(field_type) do
                             gen_completion(
@@ -687,10 +700,9 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                               comp_list
                             )
                           end
-                          break
+                          goto OUT_OF_FIELD
                         end
                       end
-                      break
                     end
                   end
                 end
@@ -700,6 +712,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
         end
       end
     end
+    ::OUT_OF_FIELD::
 
     if request_params.context and request_params.context.triggerKind == 2 then
       local trig_char = request_params.context.triggerCharacter
@@ -752,6 +765,44 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           local found_nodes, err = find_nodes(current_file, current_line, current_char - 2, ast)
           if found_nodes then
             local last_node = found_nodes[#found_nodes]
+            if last_node.attr.type.is_type and last_node.attr.scope then
+              for _, block in pairs(last_node.attr.scope.node) do
+                if type(block) == "table" and block.is_VarDecl then
+                  for _, block_children in ipairs(block) do
+                    if type(block_children) == "table" then
+                      for _, field in ipairs(block_children) do
+                        if
+                          type(field) == "table"
+                          and field.is_Type
+                          and field.attr
+                          and tostring(field.attr.value) == last_node.attr.name
+                        then
+                          for _, field_type in ipairs(field) do
+                            if field_type.is_EnumType then
+                              for _, field_type_field in ipairs(field_type) do
+                                if type(field_type_field) == "table" then
+                                  for _, enum_field in pairs(field_type_field) do
+                                    gen_completion(
+                                      enum_field[1],
+                                      comp_item_kind.EnumMember,
+                                      "```nelua\nType: int64\n```",
+                                      enum_field[1],
+                                      insert_text_format.PlainText,
+                                      comp_list
+                                    )
+                                  end
+                                end
+                              end
+                              goto OUT_OF_DOT
+                            end
+                          end
+                        end
+                      end
+                    end
+                  end
+                end
+              end
+            end
             for key, symbol in pairs(symbols) do
               local name = key:match(SYMBOL_NAME_MATCH)
               local node = symbol.node
@@ -767,63 +818,15 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                       insert_text_format.PlainText,
                       comp_list
                     )
-                  elseif
-                    name:match("^(.+)%..*$") == tostring(last_node.attr.type) and not last_node.attr.type.is_string
-                  then
-                    name = name:match("^.+%.(.*)$")
-                    gen_completion(
-                      name,
-                      comp_item_kind.Field,
-                      "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
-                      name,
-                      insert_text_format.PlainText,
-                      comp_list
-                    )
-                  end
-                elseif node.attr.type.is_type and node.attr.scope then
-                  for _, block in pairs(node.attr.scope.node) do
-                    if type(block) == "table" and block.is_VarDecl then
-                      for _, block_children in ipairs(block) do
-                        if type(block_children) == "table" then
-                          for _, field in ipairs(block_children) do
-                            if
-                              type(field) == "table"
-                              and field.is_Type
-                              and field.attr
-                              and tostring(field.attr.value) == node.attr.name
-                            then
-                              for _, field_type in ipairs(field) do
-                                if field_type.is_EnumType then
-                                  for _, field_type_field in ipairs(field_type) do
-                                    if type(field_type_field) == "table" then
-                                      for _, enum_field in pairs(field_type_field) do
-                                        gen_completion(
-                                          enum_field[1],
-                                          comp_item_kind.EnumMember,
-                                          "```nelua\nType: int64\n```",
-                                          enum_field[1],
-                                          insert_text_format.PlainText,
-                                          comp_list
-                                        )
-                                      end
-                                    end
-                                  end
-                                  break
-                                end
-                              end
-                              break
-                            end
-                          end
-                        end
-                      end
-                    end
                   end
                 elseif
                   node[2]
                   and (type(node[2]) == "table")
                   and node[2].is_Id
                   and node[2].attr.type.is_type
-                  and node[2].attr.node
+                  and node[2].attr.name == tostring(last_node.attr.type)
+                  -- and node[2].attr.node
+                  -- and not node.attr.ftype
                 then
                   for _, block in pairs(node[2].attr.node.attr.scope.node) do
                     if type(block) == "table" and block.is_VarDecl then
@@ -834,7 +837,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                               type(field) == "table"
                               and field.is_Type
                               and field.attr
-                              and tostring(field.attr.value) == node[2].attr.name
+                              and tostring(field.attr.value) == tostring(last_node.attr.type)
                             then
                               for _, field_type in ipairs(field) do
                                 if field_type.is_RecordType then
@@ -848,7 +851,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                                       comp_list
                                     )
                                   end
-                                  break
+                                  goto OUT_OF_DOT
                                 elseif field_type.is_UnionType then
                                   for _, field_type_field in ipairs(field_type) do
                                     gen_completion(
@@ -860,10 +863,9 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                                       comp_list
                                     )
                                   end
-                                  break
+                                  goto OUT_OF_DOT
                                 end
                               end
-                              break
                             end
                           end
                         end
@@ -873,6 +875,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                 end
               end
             end
+            ::OUT_OF_DOT::
           else
             logger.log(err)
           end
