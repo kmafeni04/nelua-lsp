@@ -85,11 +85,6 @@ return function(request_id, root_path, documents, current_file, current_file_pat
         local target_node = current_node.attr.node
         add_new_definition(documents, target_node, locs)
       elseif current_node.is_String then
-        -- for k, v in pairs(previous_node) do
-        --   logger.log(tostring(k) .. "  k")
-        --   logger.log(tostring(v) .. "  v")
-        -- end
-        -- logger.log(#found_nodes)
         if
           previous_node
           and previous_node.is_call
@@ -99,63 +94,77 @@ return function(request_id, root_path, documents, current_file, current_file_pat
         then
           local ss = sstream()
 
+          ---@type string
           local module_path = current_node.attr.value
           module_path = module_path:gsub("%.", "/")
+          logger.log(root_path)
+          logger.log(current_file_path)
           local current_relative_dir = current_file_path:sub(#root_path + 2):match("(.+/).*%.nelua")
+          logger.log(current_relative_dir)
           if module_path:match("^/.*") then
             if current_relative_dir then
               ss:add(current_relative_dir)
             end
             module_path = module_path:sub(2)
+          elseif not module_path:find("/") then
+            if current_relative_dir then
+              ss:add(current_relative_dir)
+            end
           end
           ss:add(module_path)
           module_path = ss:tostring()
+          logger.log(module_path)
 
-          local git_files_prog = io.popen("git ls-files; git ls-files --others 2>&1")
-          ---@diagnostic disable-next-line: need-check-nil
-          for file in git_files_prog:lines() do
-            if file == module_path .. ".nelua" then
-              local sss = sstream()
-              sss:addmany("file://", root_path, "/", module_path, ".nelua")
-              local go_to_path = sss:tostring()
-              local loc = {
-                uri = go_to_path,
-                range = {
-                  start = {
-                    line = 0,
-                    character = 0,
+          local git_files_prog, git_err = io.popen(
+            "(cd $(git rev-parse --show-toplevel); git ls-files); (cd $(git rev-parse --show-toplevel); git ls-files --others)"
+          )
+          if git_files_prog then
+            for file in git_files_prog:lines() do
+              if file == module_path .. ".nelua" then
+                local sss = sstream()
+                sss:addmany("file://", root_path, "/", module_path, ".nelua")
+                local go_to_path = sss:tostring()
+                local loc = {
+                  uri = go_to_path,
+                  range = {
+                    start = {
+                      line = 0,
+                      character = 0,
+                    },
+                    ["end"] = {
+                      line = 0,
+                      character = 1,
+                    },
                   },
-                  ["end"] = {
-                    line = 0,
-                    character = 1,
+                }
+                table.insert(locs, loc)
+              elseif file == module_path .. "/init.nelua" then
+                local sss = sstream()
+                sss:addmany("file://", root_path, "/", module_path, "/init.nelua")
+                local go_to_path = sss:tostring()
+                local loc = {
+                  uri = go_to_path,
+                  range = {
+                    start = {
+                      line = 0,
+                      character = 0,
+                    },
+                    ["end"] = {
+                      line = 0,
+                      character = 1,
+                    },
                   },
-                },
-              }
-              table.insert(locs, loc)
-            elseif file == module_path .. "/init.nelua" then
-              local sss = sstream()
-              sss:addmany("file://", root_path, "/", module_path, "/init.nelua")
-              local go_to_path = sss:tostring()
-              local loc = {
-                uri = go_to_path,
-                range = {
-                  start = {
-                    line = 0,
-                    character = 0,
-                  },
-                  ["end"] = {
-                    line = 0,
-                    character = 1,
-                  },
-                },
-              }
-              table.insert(locs, loc)
+                }
+                table.insert(locs, loc)
+              end
             end
+          else
+            logger.log(git_err)
           end
         end
       elseif current_node.is_call then
         local target_node = current_node.attr.calleesym.node
-        -- NOTE: location starts from . so add it to properlu calculate name length
+        -- NOTE: location starts from . so add it to properly calculate name length
         target_node.attr.name = "." .. current_node[1]
         add_new_definition(documents, target_node, locs)
       elseif current_node.is_Id and not current_node.attr.builtin then
@@ -168,7 +177,7 @@ return function(request_id, root_path, documents, current_file, current_file_pat
         and current_node.done.defnode
       then
         local target_node = current_node.done.defnode[2]
-        -- NOTE: location starts from . so add it to properlu calculate name length
+        -- NOTE: location starts from . so add it to properly calculate name length
         target_node.attr.name = "." .. current_node[1]
         add_new_definition(documents, target_node, locs)
       elseif current_node.is_DotIndex then
