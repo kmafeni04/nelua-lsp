@@ -24,6 +24,7 @@ local keywords = {
   ["defer"] = true,
   ["or"] = true,
   ["break"] = true,
+  ["goto"] = true,
   ["fallthrough"] = true,
   ["switch"] = true,
   ["repeat"] = true,
@@ -620,7 +621,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
       local name = key:match(SYMBOL_NAME_MATCH)
       local node = symbol.node
       if node then
-        if node.attr.type.is_type and node.attr.scope then
+        if node.attr and node.attr.type and node.attr.type.is_type and node.attr.scope then
           for _, block in pairs(node.attr.scope.node) do
             if type(block) == "table" and block.is_VarDecl then
               for _, block_children in ipairs(block) do
