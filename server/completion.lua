@@ -710,7 +710,14 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           for name, symbol in pairs(symbols) do
             local node = symbol.node
             if node and (node.is_Id or node.is_IdDecl) and not node.attr.ftype and not node.attr.type.is_type then
-              gen_completion(name, comp_item_kind.Variable, "", name, insert_text_format.PlainText, comp_list)
+              gen_completion(
+                name,
+                comp_item_kind.Variable,
+                node.attr.name .. "\n```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
+                name,
+                insert_text_format.PlainText,
+                comp_list
+              )
             end
           end
         end,
@@ -718,7 +725,14 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           for name, symbol in pairs(symbols) do
             local node = symbol.node
             if node and node.attr.type and node.attr.type.is_pointer then
-              gen_completion(name, comp_item_kind.Variable, "", name, insert_text_format.PlainText, comp_list)
+              gen_completion(
+                name,
+                comp_item_kind.Variable,
+                node.attr.name .. "\n```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
+                name,
+                insert_text_format.PlainText,
+                comp_list
+              )
             end
           end
         end,
