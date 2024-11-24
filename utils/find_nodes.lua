@@ -34,8 +34,12 @@ local function find_nodes_by_pos(node, pos, foundnodes)
   --   and type(node[1]) == "string"
   --   and pos <= node.pos + #node[1]
   -- then
+
+  -- set nodes endpos to parents if it has a parent
+  if node and node.attr and node.attr.scope and node.attr.scope.parent then
+    node.endpos = node.attr.scope.parent.node.endpos
+  end
   if node._astnode and node.pos and pos >= node.pos and node.endpos and pos < node.endpos then
-    -- logger.log(node._astnode)
     foundnodes[#foundnodes + 1] = node
   end
   for i = 1, node.nargs or #node do
