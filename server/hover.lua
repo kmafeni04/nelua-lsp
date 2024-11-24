@@ -122,6 +122,9 @@ return function(request_id, current_file, current_line, current_char, ast)
         end
         ss:addmany(parent_name, name, "\n```nelua\n", "Type: ", current_node.attr.type, "\n```")
         content = ss:tostring()
+      elseif current_node.is_ColonIndex then
+        ss:addmany(current_node.attr.name, "\n```nelua\n", "Type: ", current_node.attr.type)
+        content = ss:tostring()
       elseif current_node.is_PointerType then
         --TODO: Display more information
         ss:addmany(current_node.attr.value, "\n```nelua\n", "Type: ", current_node.attr.type, "\n```")
