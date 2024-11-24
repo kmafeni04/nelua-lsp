@@ -37,7 +37,10 @@ local function find_nodes_by_pos(node, pos, foundnodes)
 
   -- set nodes endpos to parents if it has a parent
   if node and node.attr and node.attr.scope and node.attr.scope.parent then
-    node.endpos = node.attr.scope.parent.node.endpos
+    local parent_node = node.attr.scope.parent.node
+    if parent_node.is_FuncDef then
+      node.endpos = parent_node.endpos
+    end
   end
   if node._astnode and node.pos and pos >= node.pos and node.endpos and pos < node.endpos then
     foundnodes[#foundnodes + 1] = node
