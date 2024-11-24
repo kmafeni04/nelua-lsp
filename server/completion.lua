@@ -1,3 +1,5 @@
+-- TODO: Dot completions happen for function fields and even fields of themseleves, e.g self.data. will show data again
+
 local switch = require("lib.switch")
 
 local response = require("utils.response")
@@ -494,20 +496,33 @@ local function gen_symbols(scope, pos, current_file_path)
     gen_symbols(scope.parent, pos, current_file_path)
   end
   for _, symbol in ipairs(scope.symbols) do
+    if symbol.name == "self" and symbol.usedby then
+      local parent, _ = next(symbol.usedby)
+      local parent_node = parent.node
+      symbol.node = {
+        src = parent_node.src,
+        pos = parent_node.pos,
+        _astnode = true,
+        -- endpos = parent_node.endpos,
+        attr = {
+          name = symbol.name,
+          type = symbol.type,
+        },
+      }
+    end
     local node = symbol.node
-    if node and ((node._astnode and node.pos and pos >= node.pos) or node.src.name ~= current_file_path) then
-      if not node.is_ColonIndex and not node.is_DotIndex then
+    logger.log(symbol.name, node.pos, pos)
+    if
+      node and ((node._astnode and node.pos and pos >= node.pos) or (node.src and node.src.name ~= current_file_path))
+    then
+      if
+        not node.attr.name:match("^[%w_]+%(") and not node.attr.name:match("^[%w_]+T%.") -- Generics
+      then
         if node.attr.ftype then
           symbols[symbol.name] = symbol
         else
           symbols[node.attr.name] = symbol
         end
-      elseif
-        (node.is_ColonIndex or node.is_DotIndex)
-        and not node.attr.name:match("^[%w_]+%(") -- Generics
-        and not node.attr.name:match("^[%w_]+T%.") -- Generics
-      then
-        symbols[symbol.name] = symbol
       end
     end
   end
@@ -516,17 +531,11 @@ end
 ---@param comp_list CompItem[]
 local function gen_symbol_completions(comp_list)
   for name, symbol in pairs(symbols) do
-    -- for k, v in pairs(symbol) do
-    --   logger.log(tostring(k) .. "  k")
-    --   logger.log(tostring(v) .. "  v")
-    -- end
-    local kind = comp_item_kind.Text
+    local kind = comp_item_kind.Variable
     local node = symbol.node
     if node then
       if node.attr.ftype then
         kind = comp_item_kind.Function
-      elseif node.is_Id or node.is_IdDecl then
-        kind = comp_item_kind.Variable
       end
     end
     gen_completion(
@@ -573,13 +582,18 @@ return function(request_id, request_params, current_uri, current_file_path, curr
   if ast then
     local pos = find_pos(current_file, current_line, current_char)
     gen_symbols(ast.scope, pos, current_file_path)
-    local found_nodes = find_nodes(current_file, current_line, current_char, ast)
+    local found_nodes, err = find_nodes(current_file, current_line, current_char, ast)
     if found_nodes then
       for _, node in pairs(found_nodes) do
         if node.scope then
           gen_symbols(node.scope, pos, current_file_path)
         end
       end
+      -- local current_node = found_nodes[#found_nodes]
+      -- if current_node.is_String then
+      --   comp_list = {}
+      --   goto COMP_RESPONSE
+      -- end
     end
     -- Field completions
     for name, symbol in pairs(symbols) do
@@ -838,7 +852,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           end
         end,
         [":"] = function()
-          local found_nodes, err = find_nodes(current_file, current_line, current_char - 2, ast)
+          found_nodes, err = find_nodes(current_file, current_line, current_char - 2, ast)
           if found_nodes then
             local last_node = found_nodes[#found_nodes]
             logger.log(last_node)
@@ -877,5 +891,6 @@ return function(request_id, request_params, current_uri, current_file_path, curr
       gen_symbol_completions(comp_list)
     end
   end
+  ::COMP_RESPONSE::
   response.completion(request_id, comp_list)
 end
