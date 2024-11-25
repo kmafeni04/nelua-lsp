@@ -3,7 +3,6 @@ local sstream = require("nelua.utils.sstream")
 local analyze_ast = require("utils.analyze_ast")
 local logger = require("utils.logger")
 local notification = require("utils.notification")
-local find_nodes = require("utils.find_nodes")
 
 ---@enum Severity
 local Severity = {
@@ -222,7 +221,10 @@ return function(current_file, current_file_path, current_uri)
         ss:add("Unused")
         if node.is_IdDecl then
           ss:addmany(" Variable `", node.attr.name, "`")
-        elseif node.is_DotIndex or node.is_ColonIndex then
+        elseif node.is_Label then
+          ss:addmany(" Label `", node.attr.name, "`")
+          node.attr.name = "::" .. node.attr.name .. "::"
+        elseif (node.is_DotIndex and node.attr.ftype) or node.is_ColonIndex then
           s_char = s_char + 1
           ss:addmany(" Function `", node.attr.name, "`")
           node.attr.name = node[1]
