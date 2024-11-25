@@ -1,4 +1,5 @@
--- TODO: Fix diag.uri return from create_diagnostic func
+local sstream = require("nelua.utils.sstream")
+
 local analyze_ast = require("utils.analyze_ast")
 local logger = require("utils.logger")
 local notification = require("utils.notification")
@@ -22,8 +23,24 @@ local function traverse_nodes_and_mark(node, foundnodes, mark)
 
   if node._astnode then
     foundnodes[#foundnodes + 1] = node
-    if node.attr and node.attr.name and node.pos and (node.attr.used or node.is_Id or node.is_DotIndex) then
+    if node.attr and node.attr.name and node.pos and (node.attr.used or node.is_Id) then
       mark[node.attr.name .. "//" .. tostring(node.attr.type)] = true
+    elseif node.attr.global then
+      mark[node.attr.name .. "//" .. tostring(node.attr.type)] = true
+    elseif (node.is_DotIndex or node.is_ColonIndex) and node[2].attr.global then
+      mark[node.attr.name .. "//" .. tostring(node.attr.type)] = true
+    elseif node.is_Return then
+      for _, child in ipairs(node) do
+        if type(child) == "table" and child.is_Id and child.attr.type.is_type then
+          for _, _node in pairs(foundnodes) do
+            if
+              (_node.is_DotIndex or _node.is_ColonIndex) and tostring(child.attr.type) == tostring(_node[2].attr.type)
+            then
+              mark[_node.attr.name .. "//" .. tostring(_node.attr.type)] = true
+            end
+          end
+        end
+      end
     end
   end
   for i = 1, node.nargs or #node do
@@ -129,10 +146,6 @@ return function(current_file, current_file_path, current_uri)
   current_file = current_file
   local diagnostics = {}
   local ast, err = analyze_ast(current_file, current_file_path)
-  -- for k, v in pairs(err) do
-  --   logger.log(tostring(k) .. "  k")
-  --   logger.log(tostring(v) .. "  v")
-  -- end
   if err then
     if err.message:match(":%s*error:") then
       local diag = create_diagnostic_fields(
@@ -194,21 +207,36 @@ return function(current_file, current_file_path, current_uri)
     end
 
     for _, node in pairs(nodes) do
-      if node.attr and node.attr.name and node.pos and not mark[node.attr.name .. "//" .. tostring(node.attr.type)] then
+      if
+        node.attr
+        and node.attr.name
+        and node.pos
+        and not mark[node.attr.name .. "//" .. tostring(node.attr.type)]
+        and not node.is_FuncDef
+      then
         local pos = node.pos
         unused = true
         local s_line, s_char = pos_to_line_and_char(pos, current_file)
-        local msg = "Unused"
+        local ss = sstream()
+        local msg = ""
+        ss:add("Unused")
         if node.is_IdDecl then
-          msg = "Unused Variable"
+          ss:addmany(" Variable `", node.attr.name, "`")
+        elseif node.is_DotIndex or node.is_ColonIndex then
+          s_char = s_char + 1
+          ss:addmany(" Function `", node.attr.name, "`")
+          node.attr.name = node[1]
+        else
+          ss:addmany(" `", node.attr.name, "`")
         end
+        msg = ss:tostring()
         local diagnostic = {
           range = {
             start = { line = s_line, character = s_char },
             ["end"] = { line = s_line, character = s_char + #node.attr.name },
           },
           message = msg,
-          severity = Severity.Information,
+          severity = Severity.Hint,
         }
         table.insert(diagnostics, diagnostic)
       end
