@@ -1,4 +1,3 @@
--- TODO: Fix Dotindex symbols in completions
 -- TODO: If workspace folder is provided, use that instead of the git root path
 
 local rpc = require("utils.rpc")

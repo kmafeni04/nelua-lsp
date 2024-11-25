@@ -514,7 +514,10 @@ local function gen_symbols(scope, pos, current_file_path)
       node and ((node._astnode and node.pos and pos >= node.pos) or (node.src and node.src.name ~= current_file_path))
     then
       if
-        not node.attr.name:match("^[%w_]+%(") and not node.attr.name:match("^[%w_]+T%.") -- Generics
+        node.attr
+        and node.attr.name
+        and not node.attr.name:match("^[%w_]+%(")
+        and not node.attr.name:match("^[%w_]+T%.") -- Generics
       then
         if node.attr.ftype then
           -- Concatenated with type to avoid clashes of the same name

@@ -114,7 +114,6 @@ function response.definition(request_id, locs)
 
   local encoded_msg, err = rpc.encode(definition_response)
   if encoded_msg then
-    logger.log(encoded_msg)
     io.write(encoded_msg)
     io.flush()
   else

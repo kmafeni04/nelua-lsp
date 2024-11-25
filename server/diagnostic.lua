@@ -2,6 +2,7 @@
 local analyze_ast = require("utils.analyze_ast")
 local logger = require("utils.logger")
 local notification = require("utils.notification")
+local find_nodes = require("utils.find_nodes")
 
 ---@enum Severity
 local Severity = {
@@ -11,12 +12,48 @@ local Severity = {
   Hint = 4,
 }
 
+---@param node table
+---@param foundnodes table
+---@param mark table
+local function traverse_nodes_and_mark(node, foundnodes, mark)
+  if type(node) ~= "table" then
+    return nil, "Node passed to find_nodes_by_pos was not a table"
+  end
+
+  if node._astnode then
+    foundnodes[#foundnodes + 1] = node
+    if node.attr and node.attr.name and node.pos and (node.attr.used or node.is_Id or node.is_DotIndex) then
+      mark[node.attr.name .. "//" .. tostring(node.attr.type)] = true
+    end
+  end
+  for i = 1, node.nargs or #node do
+    traverse_nodes_and_mark(node[i], foundnodes, mark)
+  end
+  return foundnodes, nil
+end
+
+---@param pos integer
+---@param current_file string
+---@return integer s_line
+---@return integer e_line
+local function pos_to_line_and_char(pos, current_file)
+  local s_line = 0
+  local pos_at_line = 0
+  local text = current_file:sub(1, pos)
+  for line in text:gmatch("[^\r\n]*\r?\n") do
+    pos_at_line = pos_at_line + #line
+    s_line = s_line + 1
+  end
+  local s_char = pos - pos_at_line - 1
+  return s_line, s_char
+end
+
 ---@param analysis string
 ---@param analysis_match string
 ---@param severity integer
 ---@param current_file_path string
 ---@return Diagnsotic
-local function create_diagnostic(analysis, analysis_match, severity, current_file_path)
+local function create_diagnostic_fields(analysis, analysis_match, severity, current_file_path)
   ---@class Diagnsotic
   ---@field severity integer
   ---@field uri string
@@ -90,6 +127,7 @@ end
 ---@return table? ast
 return function(current_file, current_file_path, current_uri)
   current_file = current_file
+  local diagnostics = {}
   local ast, err = analyze_ast(current_file, current_file_path)
   -- for k, v in pairs(err) do
   --   logger.log(tostring(k) .. "  k")
@@ -97,25 +135,88 @@ return function(current_file, current_file_path, current_uri)
   -- end
   if err then
     if err.message:match(":%s*error:") then
-      local diag =
-        create_diagnostic(err.message, "(.-):(%d+):(%d+):%s+error:%s+([^\r\n]+)", Severity.Error, current_file_path)
-      notification.diagnostic(diag.uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
+      local diag = create_diagnostic_fields(
+        err.message,
+        "(.-):(%d+):(%d+):%s+error:%s+([^\r\n]+)",
+        Severity.Error,
+        current_file_path
+      )
+      local diagnostic = {
+        range = {
+          start = { line = diag.line, character = diag.s_char },
+          ["end"] = { line = diag.line, character = diag.e_char },
+        },
+        message = diag.msg,
+        severity = diag.severity,
+      }
+      table.insert(diagnostics, diagnostic)
+      notification.diagnostic(diag.uri, diagnostics, false)
       return nil
     elseif err.message:match(":%s*syntax error:") then
-      local diag = create_diagnostic(
+      local diag = create_diagnostic_fields(
         err.message,
         "(.-):(%d+):(%d+):%s+syntax error:%s+([^\r\n]+)",
         Severity.Error,
         current_file_path
       )
-      notification.diagnostic(diag.uri, diag.line, diag.s_char, diag.e_char, diag.severity, diag.msg, false)
+      local diagnostic = {
+        range = {
+          start = { line = diag.line, character = diag.s_char },
+          ["end"] = { line = diag.line, character = diag.e_char },
+        },
+        message = diag.msg,
+        severity = diag.severity,
+      }
+      table.insert(diagnostics, diagnostic)
+      notification.diagnostic(diag.uri, diagnostics, false)
       return nil
     else
-      notification.diagnostic(current_uri, 0, 0, 1, Severity.Error, "There is an unknown error", false)
+      local diagnostic = {
+        range = {
+          start = { line = 0, character = 0 },
+          ["end"] = { line = 0, character = 1 },
+        },
+        message = "There is an unknown error",
+        severity = Severity.Error,
+      }
+      table.insert(diagnostics, diagnostic)
+      notification.diagnostic(current_uri, diagnostics, false)
       return nil
     end
   else
-    notification.diagnostic(current_uri, 0, 0, 0, 0, "", true)
+    local unused = false
+    local nodes = {}
+    local mark = {}
+    for _, node in
+      pairs(ast --[[@as table]])
+    do
+      traverse_nodes_and_mark(node, nodes, mark)
+    end
+
+    for _, node in pairs(nodes) do
+      if node.attr and node.attr.name and node.pos and not mark[node.attr.name .. "//" .. tostring(node.attr.type)] then
+        local pos = node.pos
+        unused = true
+        local s_line, s_char = pos_to_line_and_char(pos, current_file)
+        local msg = "Unused"
+        if node.is_IdDecl then
+          msg = "Unused Variable"
+        end
+        local diagnostic = {
+          range = {
+            start = { line = s_line, character = s_char },
+            ["end"] = { line = s_line, character = s_char + #node.attr.name },
+          },
+          message = msg,
+          severity = Severity.Information,
+        }
+        table.insert(diagnostics, diagnostic)
+      end
+    end
+    notification.diagnostic(current_uri, diagnostics, false)
+    if not unused then
+      notification.diagnostic(current_uri, diagnostics, true)
+    end
     return ast
   end
 end
