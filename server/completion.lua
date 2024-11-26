@@ -493,39 +493,47 @@ end
 ---@param current_file_path string
 ---@param symbols table
 local function gen_symbols(scope, pos, current_file_path, symbols)
-  if scope.parent then
-    gen_symbols(scope.parent, pos, current_file_path, symbols)
-  end
-  for _, symbol in ipairs(scope.symbols) do
-    if symbol.name == "self" and symbol.usedby then
-      local parent, _ = next(symbol.usedby)
-      local parent_node = parent.node
-      symbol.node = {
-        src = parent_node.src,
-        pos = parent_node.pos,
-        _astnode = true,
-        -- endpos = parent_node.endpos,
-        attr = {
-          name = symbol.name,
-          type = symbol.type,
-        },
-      }
+  if type(scope) == "table" then
+    if scope.parent then
+      gen_symbols(scope.parent, pos, current_file_path, symbols)
     end
-    local node = symbol.node
-    if
-      node and ((node._astnode and node.pos and pos >= node.pos) or (node.src and node.src.name ~= current_file_path))
-    then
+    for _, symbol in ipairs(scope.symbols) do
+      if symbol.name == "self" and symbol.usedby then
+        local parent, _ = next(symbol.usedby)
+        local parent_node = parent.node
+        symbol.node = {
+          src = parent_node.src,
+          pos = parent_node.pos,
+          _astnode = true,
+          -- endpos = parent_node.endpos,
+          attr = {
+            name = symbol.name,
+            type = symbol.type,
+          },
+        }
+      end
+      local node = symbol.node
       if
-        node.attr
-        and node.attr.name
-        and not node.attr.name:match("^[%w_]+%(")
-        and not node.attr.name:match("^[%w_]+T%.") -- Generics
+        node and ((node._astnode and node.pos and pos >= node.pos) or (node.src and node.src.name ~= current_file_path))
       then
-        if node.attr.ftype then
-          -- Concatenated with type to avoid clashes of the same name
-          symbols[symbol.name .. "//" .. tostring(node.attr.type)] = symbol
-        else
-          symbols[node.attr.name .. "//" .. tostring(node.attr.type)] = symbol
+        if
+          node.attr
+          and node.attr.name
+          and not node.attr.name:match("^[%w_]+%(")
+          and not node.attr.name:match("^[%w_]+T%.") -- Generics
+        then
+          if node.attr.ftype then
+            if node.attr.metafunc then
+              if node[2].attr.global or node[2].src.name == current_file_path then
+                symbols[symbol.name .. "//" .. tostring(node.attr.type)] = symbol
+              end
+            else
+              -- Concatenated with type to avoid clashes of the same name
+              symbols[symbol.name .. "//" .. tostring(node.attr.type)] = symbol
+            end
+          else
+            symbols[node.attr.name .. "//" .. tostring(node.attr.type)] = symbol
+          end
         end
       end
     end
@@ -610,12 +618,13 @@ return function(request_id, request_params, current_uri, current_file_path, curr
     ast_cache[current_uri] = ast
   else
     pos = _pos
-    ast = ast_cache[current_uri]
+    content = current_file
     line = current_line
-    char = current_char - 1
+    char = current_char
+    ast = ast_cache[current_uri]
   end
   if ast then
-    local found_nodes = find_nodes(content, line, char, ast)
+    local found_nodes, find_err = find_nodes(content, line, char, ast)
     if found_nodes then
       local last_node = found_nodes[#found_nodes]
       -- Symbol generation
@@ -726,7 +735,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                 and last_node[2].attr.type.fields
               then
                 for k, v in pairs(last_node[2].attr.type.fields) do
-                  logger.log(k, v)
+                  -- logger.log(k, v)
                   if type(k) == "string" and type(v) == "table" then
                     gen_completion(
                       k,
@@ -747,18 +756,52 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                 for key, symbol in pairs(symbols) do
                   local name = key:match(SYMBOL_NAME_MATCH)
                   local node = symbol.node
-                  if node and node.attr.ftype then
-                    if name:match("^(.+)%..*$") == tostring(last_node[2].attr.type) then
-                      name = name:match("^.+%.(.*)$")
+
+                  if node and node.attr.ftype and node.attr.ftype.argtypes then
+                    local argtypes = node.attr.ftype.argtypes
+                    if
+                      (
+                        (
+                          argtypes[1].name == "pointer"
+                          and argtypes[1].subtype
+                          and tostring(argtypes[1].subtype) == tostring(last_node[2].attr.type)
+                        )
+                        or (argtypes[1].name == tostring(last_node[2].attr.type))
+                      )
+                      and name:match("^(.+)%..*$") == tostring(last_node[2].attr.type)
+                    then
                       gen_completion(
-                        name,
+                        node[1],
                         comp_item_kind.Method,
-                        "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
-                        name,
+                        node[1] .. "\n```nelua\nType: " .. tostring(node.attr.ftype),
+                        node[1],
                         insert_text_format.PlainText,
                         comp_list
                       )
                     end
+                    -- if i == "name" then
+                    --   if
+                    --     j == "pointer"
+                    --     and v.subtype
+                    --     and tostring(v.subtype) == tostring(last_node[2].attr.type)
+                    --   then
+                    --     logger.log(v.subtype)
+                    --   elseif j == tostring(last_node[2].attr.type) then
+                    --     logger.log(j)
+                    --   end
+                    -- end
+                    -- logger.log(node)
+                    -- if name:match("^(.+)%..*$") == tostring(last_node[2].attr.type) then
+                    --   name = name:match("^.+%.(.*)$")
+                    --   gen_completion(
+                    --     name,
+                    --     comp_item_kind.Method,
+                    --     "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
+                    --     name,
+                    --     insert_text_format.PlainText,
+                    --     comp_list
+                    --   )
+                    -- end
                   end
                 end
               elseif last_node.is_IdDecl then
@@ -775,6 +818,8 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           end,
         })
       end
+    else
+      logger.log(find_err)
     end
   end
   response.completion(request_id, comp_list)
