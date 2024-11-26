@@ -175,7 +175,7 @@ return function(request_id, root_path, documents, current_file, current_file_pat
         -- NOTE: location starts from . so add it to properly calculate name length
         target_node.attr.name = "." .. current_node[1]
         add_new_definition(documents, target_node, locs)
-      elseif current_node.is_Id and not current_node.attr.builtin then
+      elseif current_node.is_Id and current_node.attr.node and not current_node.attr.builtin then
         local target_node = current_node.attr.node
         add_new_definition(documents, target_node, locs)
       elseif
