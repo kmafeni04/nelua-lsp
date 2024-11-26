@@ -42,7 +42,7 @@ local function find_nodes_by_pos(node, pos, foundnodes)
   --     node.endpos = parent_node.endpos
   --   end
   -- end
-  if node._astnode and node.pos and pos >= node.pos and node.endpos and pos < node.endpos then
+  if node._astnode and node.pos and pos >= node.pos and node.endpos and pos <= node.endpos then
     foundnodes[#foundnodes + 1] = node
   end
   for i = 1, node.nargs or #node do
@@ -66,9 +66,9 @@ return function(current_file, current_line, current_char, ast)
         return found_nodes, nil
       else
         return nil,
-          debug.getinfo(2).source
+          debug.getinfo(1).source
             .. ":"
-            .. debug.getinfo(2).currentline
+            .. debug.getinfo(1).currentline
             .. ": find_nodes_by_pos returned and empty table"
       end
     else
