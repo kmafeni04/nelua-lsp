@@ -3,6 +3,7 @@ local sstream = require("nelua.utils.sstream")
 local analyze_ast = require("utils.analyze_ast")
 local logger = require("utils.logger")
 local notification = require("utils.notification")
+local pos_to_line_and_char = require("utils.pos_to_line_char")
 
 ---@enum Severity
 local Severity = {
@@ -46,22 +47,6 @@ local function traverse_nodes_and_mark(node, foundnodes, mark)
     traverse_nodes_and_mark(node[i], foundnodes, mark)
   end
   return foundnodes, nil
-end
-
----@param pos integer
----@param current_file string
----@return integer s_line
----@return integer e_line
-local function pos_to_line_and_char(pos, current_file)
-  local s_line = 0
-  local pos_at_line = 0
-  local text = current_file:sub(1, pos)
-  for line in text:gmatch("[^\r\n]*\r?\n") do
-    pos_at_line = pos_at_line + #line
-    s_line = s_line + 1
-  end
-  local s_char = pos - pos_at_line - 1
-  return s_line, s_char
 end
 
 ---@param analysis string

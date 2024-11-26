@@ -15,6 +15,7 @@ return function(current_file, current_file_path)
   local ast
   local ok, err = except.trycall(function()
     ast = aster.parse(current_file, current_file_path)
+    -- logger.log(ast)
     local context = AnalyzerContext(analyzer.visitors, ast, generator)
     except.try(function()
       for _, v in pairs(typedefs.primtypes) do
@@ -28,6 +29,7 @@ return function(current_file, current_file_path)
       e.message = context:get_visiting_traceback(1) .. e:get_message()
     end)
   end)
+  -- logger.log(ast)
   if ok then
     return ast, nil
   else
@@ -41,6 +43,6 @@ return function(current_file, current_file_path)
         return err.message
       end
     end
-    return nil, err
+    return ast, err
   end
 end
