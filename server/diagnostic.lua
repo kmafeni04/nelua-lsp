@@ -31,7 +31,7 @@ local function traverse_nodes_and_mark(node, foundnodes, mark)
       mark[node.attr.name .. "//" .. tostring(node.attr.type)] = true
     elseif node.is_Return then
       for _, child in ipairs(node) do
-        if type(child) == "table" and child.is_Id and child.attr.type.is_type then
+        if type(child) == "table" and child.is_Id and child.attr.type and child.attr.type.is_type then
           for _, _node in pairs(foundnodes) do
             if
               (_node.is_DotIndex or _node.is_ColonIndex) and tostring(child.attr.type) == tostring(_node[2].attr.type)
