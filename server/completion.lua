@@ -715,13 +715,17 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                 and last_node.attr.type.fields
                 and last_node.attr.type.is_enum
               then
-                for k, v in pairs(last_node.attr.type.fields) do
-                  if type(k) == "string" and type(v) == "table" then
+                for field_name, field in pairs(last_node.attr.type.fields) do
+                  if type(field_name) == "string" and type(field) == "table" then
                     gen_completion(
-                      k,
+                      field_name,
                       comp_item_kind.EnumMember,
-                      k .. "\n```nelua\nType: " .. tostring(last_node.attr.type.subtype) .. " = " .. tostring(v.value),
-                      k,
+                      field_name
+                        .. "\n```nelua\nType: "
+                        .. tostring(last_node.attr.type.subtype)
+                        .. " = "
+                        .. tostring(field.value),
+                      field_name,
                       insert_text_format.PlainText,
                       comp_list
                     )
@@ -732,19 +736,37 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                 and type(last_node[2]) == "table"
                 and last_node[2].attr
                 and last_node[2].attr.type
-                and last_node[2].attr.type.fields
               then
-                for k, v in pairs(last_node[2].attr.type.fields) do
-                  -- logger.log(k, v)
-                  if type(k) == "string" and type(v) == "table" then
-                    gen_completion(
-                      k,
-                      comp_item_kind.Field,
-                      k .. "\n```nelua\nType: " .. tostring(v.type),
-                      k,
-                      insert_text_format.PlainText,
-                      comp_list
-                    )
+                if last_node[2].attr.type.fields then
+                  for field_name, field in pairs(last_node[2].attr.type.fields) do
+                    if type(field_name) == "string" and type(field) == "table" then
+                      gen_completion(
+                        field_name,
+                        comp_item_kind.Field,
+                        field_name .. "\n```nelua\nType: " .. tostring(field.type),
+                        field_name,
+                        insert_text_format.PlainText,
+                        comp_list
+                      )
+                    end
+                  end
+                elseif last_node[2].attr.type.name == "pointer" and last_node[2].attr.type.subtype then
+                  local subtype_node = last_node[2].attr.type.subtype
+                  if subtype_node and type(subtype_node) == "table" then
+                    for field_name, field in pairs(subtype_node.fields) do
+                      if type(field_name) == "string" and type(field) == "table" then
+                        if not subtype_node.is_enum then
+                          gen_completion(
+                            field_name,
+                            comp_item_kind.Field,
+                            field_name .. "\n```nelua\nType: " .. tostring(field.type),
+                            field_name,
+                            insert_text_format.PlainText,
+                            comp_list
+                          )
+                        end
+                      end
+                    end
                   end
                 end
               end
