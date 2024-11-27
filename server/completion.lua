@@ -711,22 +711,35 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           end,
           ["."] = function()
             if kind == "field" and last_node.is_call then
-              if
-                last_node.attr
-                and last_node.attr.type
-                and last_node.attr.type.fields
-                and last_node.attr.type.is_enum
-              then
-                for field_name, field in pairs(last_node.attr.type.fields) do
-                  if type(field_name) == "string" and type(field) == "table" then
+              if last_node.attr and last_node.attr.type and last_node.attr.type.fields then
+                local node_type = last_node.attr.type
+                if node_type.is_enum then
+                  for field_name, field in pairs(node_type.fields) do
+                    if type(field_name) == "string" and type(field) == "table" then
+                      gen_completion(
+                        field_name,
+                        comp_item_kind.EnumMember,
+                        field_name
+                          .. "\n```nelua\nType: "
+                          .. tostring(last_node.attr.type.subtype)
+                          .. " = "
+                          .. tostring(field.value),
+                        field_name,
+                        insert_text_format.PlainText,
+                        comp_list
+                      )
+                    end
+                  end
+                elseif last_node.attr.type.is_record or last_node.attr.type.is_union then
+                  for field_name, field in pairs(node_type.metafields) do
+                    local comp_kind = comp_item_kind.Field
+                    if field.metafunc then
+                      comp_kind = comp_item_kind.Function
+                    end
                     gen_completion(
                       field_name,
-                      comp_item_kind.EnumMember,
-                      field_name
-                        .. "\n```nelua\nType: "
-                        .. tostring(last_node.attr.type.subtype)
-                        .. " = "
-                        .. tostring(field.value),
+                      comp_kind,
+                      field_name .. "\n```nelua\nType: " .. tostring(field.type),
                       field_name,
                       insert_text_format.PlainText,
                       comp_list
@@ -739,8 +752,9 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                 and last_node[2].attr
                 and last_node[2].attr.type
               then
-                if last_node[2].attr.type.fields then
-                  for field_name, field in pairs(last_node[2].attr.type.fields) do
+                local node_type = last_node[2].attr.type
+                if node_type.fields then
+                  for field_name, field in pairs(node_type.fields) do
                     if type(field_name) == "string" and type(field) == "table" then
                       gen_completion(
                         field_name,
@@ -752,8 +766,8 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                       )
                     end
                   end
-                elseif last_node[2].attr.type.name == "pointer" and last_node[2].attr.type.subtype then
-                  local subtype_node = last_node[2].attr.type.subtype
+                elseif node_type.name == "pointer" and node_type.subtype then
+                  local subtype_node = node_type.subtype
                   if subtype_node and type(subtype_node) == "table" then
                     for field_name, field in pairs(subtype_node.fields) do
                       if type(field_name) == "string" and type(field) == "table" then
@@ -781,7 +795,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                   local name = key:match(SYMBOL_NAME_MATCH)
                   local node = symbol.node
 
-                  if node and node.attr.ftype and node.attr.ftype.argtypes then
+                  if node and node.attr.ftype and node.attr.ftype.argtypes and next(node.attr.ftype.argtypes) then
                     local argtypes = node.attr.ftype.argtypes
                     if
                       (
@@ -803,32 +817,14 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                         comp_list
                       )
                     end
-                    -- if i == "name" then
-                    --   if
-                    --     j == "pointer"
-                    --     and v.subtype
-                    --     and tostring(v.subtype) == tostring(last_node[2].attr.type)
-                    --   then
-                    --     logger.log(v.subtype)
-                    --   elseif j == tostring(last_node[2].attr.type) then
-                    --     logger.log(j)
-                    --   end
-                    -- end
-                    -- logger.log(node)
-                    -- if name:match("^(.+)%..*$") == tostring(last_node[2].attr.type) then
-                    --   name = name:match("^.+%.(.*)$")
-                    --   gen_completion(
-                    --     name,
-                    --     comp_item_kind.Method,
-                    --     "```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
-                    --     name,
-                    --     insert_text_format.PlainText,
-                    --     comp_list
-                    --   )
-                    -- end
                   end
                 end
-              elseif last_node.is_IdDecl then
+              elseif
+                last_node.is_IdDecl
+                or last_node.is_FuncDef
+                or last_node.is_RecordType
+                or last_node.is_UnionType
+              then
                 gen_types(comp_list)
                 for key, symbol in pairs(symbols) do
                   local name = key:match(SYMBOL_NAME_MATCH)
