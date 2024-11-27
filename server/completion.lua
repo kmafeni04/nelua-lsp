@@ -550,6 +550,8 @@ local function gen_symbol_completions(comp_list, symbols)
     if node then
       if node.attr.ftype then
         kind = comp_item_kind.Function
+      elseif node.attr.type and node.attr.type.is_type then
+        kind = comp_item_kind.Class
       end
     end
     gen_completion(
