@@ -14,14 +14,15 @@ function server.initialize(request_id)
 end
 
 ---@param current_file_path string
-function server.did_open(current_file_path)
-  local current_file_prog = io.open(current_file_path)
-  local current_file = ""
-  if current_file_prog then
-    current_file = current_file_prog:read("a")
-  end
-  return current_file
-end
+---@return string?
+-- function server.did_open(current_file_path)
+--   local current_file_prog = io.open(current_file_path)
+--   local current_file
+--   if current_file_prog then
+--     current_file = current_file_prog:read("a")
+--   end
+--   return current_file
+-- end
 
 ---@param current_file string
 ---@param current_file_path string
@@ -36,10 +37,7 @@ end
 ---@param request_params table
 ---@return string
 function server.did_change(documents, current_uri, request_params)
-  local current_file = ""
-  if documents[current_uri] then
-    current_file = request_params.contentChanges[1].text
-  end
+  local current_file = request_params.contentChanges[1].text
   return current_file
 end
 

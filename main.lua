@@ -1,4 +1,5 @@
 -- TODO: If workspace folder is provided, use that instead of the git root path
+-- TODO: Switch from full content caching to incremental
 
 local rpc = require("utils.rpc")
 local switch = require("lib.switch")

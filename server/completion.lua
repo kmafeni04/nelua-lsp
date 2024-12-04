@@ -1,3 +1,4 @@
+-- TODO: Check how methods for generics like `sequence` work as pressing `:` shows no methods
 local switch = require("lib.switch")
 
 local response = require("utils.response")
@@ -273,6 +274,17 @@ local function gen_primitive_types_completions(comp_list)
   gen_completion("void", comp_item_kind.Class, "", "void", insert_text_format.PlainText, comp_list)
 
   gen_completion("type", comp_item_kind.Class, "", "type", insert_text_format.PlainText, comp_list)
+
+  gen_completion("facultative", comp_item_kind.Class, "", "facultative(${1:T})", insert_text_format.Snippet, comp_list)
+
+  gen_completion(
+    "overload",
+    comp_item_kind.Class,
+    "",
+    "overload(${1:T1}, ${2:T2})",
+    insert_text_format.Snippet,
+    comp_list
+  )
 end
 
 ---@param comp_list CompItem[]
@@ -791,33 +803,16 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           [":"] = function()
             if kind == "colon" then
               if last_node.is_call then
-                for key, symbol in pairs(symbols) do
-                  local name = key:match(SYMBOL_NAME_MATCH)
-                  local node = symbol.node
-
-                  if node and node.attr.ftype and node.attr.ftype.argtypes and next(node.attr.ftype.argtypes) then
-                    local argtypes = node.attr.ftype.argtypes
-                    if
-                      (
-                        (
-                          argtypes[1].name == "pointer"
-                          and argtypes[1].subtype
-                          and tostring(argtypes[1].subtype) == tostring(last_node[2].attr.type)
-                        )
-                        or (argtypes[1].name == tostring(last_node[2].attr.type))
-                      )
-                      and name:match("^(.+)%..*$") == tostring(last_node[2].attr.type)
-                    then
-                      gen_completion(
-                        node[1],
-                        comp_item_kind.Method,
-                        node[1] .. "\n```nelua\nType: " .. tostring(node.attr.ftype),
-                        node[1],
-                        insert_text_format.PlainText,
-                        comp_list
-                      )
-                    end
-                  end
+                local node_type = last_node[2].attr.type
+                for field_name, field in pairs(node_type.metafields) do
+                  gen_completion(
+                    field_name,
+                    comp_item_kind.Function,
+                    field_name .. "\n```nelua\nType: " .. tostring(field.type),
+                    field_name,
+                    insert_text_format.PlainText,
+                    comp_list
+                  )
                 end
               elseif
                 last_node.is_IdDecl
@@ -829,7 +824,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                 for key, symbol in pairs(symbols) do
                   local name = key:match(SYMBOL_NAME_MATCH)
                   local node = symbol.node
-                  if node and node.attr.type.is_type then
+                  if node and node.attr and node.attr.type and node.attr.type.is_type then
                     gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
                   end
                 end

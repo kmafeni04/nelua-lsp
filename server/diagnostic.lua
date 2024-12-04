@@ -1,3 +1,5 @@
+-- TODO: For unused variables, rework how they are identified as the same name and
+-- type in two seperate functions will be treated as used if one of them is used
 local sstream = require("nelua.utils.sstream")
 
 local analyze_ast = require("utils.analyze_ast")
