@@ -1,21 +1,5 @@
 local logger = require("utils.logger")
-
----@param current_file string
----@param current_line integer
----@param current_char integer
-local function find_pos(current_file, current_line, current_char)
-  local i = 0
-  local pos = 0
-  for line in current_file:gmatch("[^\r\n]*\r?\n") do
-    if i == current_line then
-      pos = pos + current_char
-      break
-    end
-    i = i + 1
-    pos = pos + #line
-  end
-  return pos + 1
-end
+local find_pos = require("utils.find_pos")
 
 ---@param node table
 ---@param pos integer
@@ -66,10 +50,10 @@ return function(current_file, current_line, current_char, ast)
         return found_nodes, nil
       else
         return nil,
-          debug.getinfo(1).source
-            .. ":"
-            .. debug.getinfo(1).currentline
-            .. ": find_nodes_by_pos returned and empty table"
+          ("%s:%d: find_nodes_by_pos returned and empty table"):format(
+            debug.getinfo(1).source,
+            debug.getinfo(1).currentline
+          )
       end
     else
       return nil, err

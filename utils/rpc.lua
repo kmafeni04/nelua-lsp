@@ -9,7 +9,7 @@ local rpc = {}
 function rpc.encode(msg)
   local ok, content = pcall(json.encode, msg)
   if ok then
-    local result = "Content-Length: " .. #content .. "\r\n\r\n" .. content
+    local result = ("Content-Length: %d\r\n\r\n%s"):format(#content, content)
     return result, nil
   else
     return nil, content

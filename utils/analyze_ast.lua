@@ -26,7 +26,7 @@ return function(current_file, current_file_path)
 
       context = analyzer.analyze(context)
     end, function(e)
-      e.message = context:get_visiting_traceback(1) .. e:get_message()
+      e.message = ("%s%s"):format(context:get_visiting_traceback(1), e:get_message())
     end)
   end)
   -- logger.log(ast)

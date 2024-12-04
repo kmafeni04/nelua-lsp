@@ -54,7 +54,7 @@ while true do
         end
       end,
       ["textDocument/didChange"] = function()
-        current_file = server.did_change(documents, current_uri, request.params)
+        current_file = server.did_change(current_file, request.params)
         documents[current_uri] = current_file
 
         local ast = server.diagnostic(current_file, current_file_path, current_uri)
