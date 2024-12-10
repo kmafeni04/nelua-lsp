@@ -61,11 +61,12 @@ end
 
 ---@param request_id integer
 ---@param current_file string
+---@param current_file_path string
 ---@param current_line integer
 ---@param current_char integer
 ---@param ast? table
-function server.hover(request_id, current_file, current_line, current_char, ast)
-  hover(request_id, current_file, current_line, current_char, ast)
+function server.hover(request_id, current_file, current_file_path, current_line, current_char, ast)
+  hover(request_id, current_file, current_file_path, current_line, current_char, ast)
 end
 
 ---@param request_id integer

@@ -81,7 +81,7 @@ while true do
         current_file = documents[current_uri]
         local ast = ast_cache[current_uri]
 
-        server.hover(request.id, current_file, current_line, current_char, ast)
+        server.hover(request.id, current_file, current_file_path, current_line, current_char, ast)
       end,
       ["textDocument/definition"] = function()
         local current_line = request.params.position.line
