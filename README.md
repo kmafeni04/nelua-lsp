@@ -4,7 +4,7 @@ This is an early implementation of writing an LSP server the for [nelua](https:/
 
 ## Notes
 - I've only tested this on my machine running arch linux and I'm pretty sure it currently won't work correctly on windows. Please report errors when you discover and if possible help me get it working on windows
-- Due to some issues in analyzing the document, memory usage increases on each request(textDocument/didChange, textDocument/didSave, etc)
+- Due to some issues in analyzing the document, memory usage increases on each request(textDocument/didChange, textDocument/didSave, etc) and currently waiting on a [fix](https://github.com/edubart/nelua-lang/issues/282) from the language creator
 
 ## Goals
 
