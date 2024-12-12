@@ -144,7 +144,9 @@ return function(request_id, current_file, current_file_path, current_line, curre
           name = current_node[1]
         end
         ss:addmany(parent_name, name, "\n```nelua\n", "Type: ", current_node.attr.type, "\n```")
-        add_doc(current_node.attr.node.src.content, current_node.attr.node.src.name, current_node.attr.node.pos)
+        if current_node.attr.node then
+          add_doc(current_node.attr.node.src.content, current_node.attr.node.src.name, current_node.attr.node.pos)
+        end
         content = ss:tostring()
       elseif current_node.is_FuncDef then
         ss:addmany(current_node.attr.name, "\n```nelua\nType: ", tostring(current_node.attr.type), "\n```\n")
