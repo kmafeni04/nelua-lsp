@@ -28,6 +28,7 @@ function response.initialize(request_id)
         textDocumentSync = 2,
         completionProvider = { triggerCharacters = { ".", ":", "@", "*", "&", "$" } },
         hoverProvider = true,
+        renameProvider = true,
         definitionProvider = true,
       },
     },
@@ -113,6 +114,26 @@ function response.definition(request_id, locs)
   }
 
   local encoded_msg, err = rpc.encode(definition_response)
+  if encoded_msg then
+    io.write(encoded_msg)
+    io.flush()
+  else
+    logger.log(err)
+  end
+end
+
+---@param request_id integer
+---@param changes table
+function response.rename(request_id, changes)
+  local rename_response = {
+    jsonrpc = "2.0",
+    id = request_id,
+    result = {
+      changes = changes,
+    },
+  }
+
+  local encoded_msg, err = rpc.encode(rename_response)
   if encoded_msg then
     io.write(encoded_msg)
     io.flush()

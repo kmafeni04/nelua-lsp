@@ -8,6 +8,7 @@ local diagnostic = require("server.diagnostic")
 local completion = require("server.completion")
 local hover = require("server.hover")
 local definition = require("server.definition")
+local rename = require("server.rename")
 
 local server = {}
 
@@ -88,6 +89,14 @@ function server.definition(
   ast
 )
   definition(request_id, root_path, documents, current_file, current_file_path, current_line, current_char, ast)
+end
+
+---@param request_id integer
+---@param request_params table
+---@param current_file string,
+---@param ast table
+function server.rename(request_id, request_params, current_file, ast)
+  rename(request_id, request_params, current_file, ast)
 end
 
 function server.shutdown()

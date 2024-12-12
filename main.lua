@@ -100,6 +100,9 @@ while true do
           ast
         )
       end,
+      ["textDocument/rename"] = function()
+        server.rename(request.id, request.params, current_file, ast_cache[current_uri])
+      end,
       ["textDocument/didClose"] = function()
         documents[current_uri] = nil
         ast_cache[current_uri] = nil
