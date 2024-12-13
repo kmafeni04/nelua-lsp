@@ -61,7 +61,7 @@ return function(request_id, request_params, current_file, ast)
       [(current_node.is_Id or current_node.is_IdDecl) or false] = function()
         local scope_node = current_node.attr.scope.node
         local scope_nodes, err = find_nodes_in_scope_node(scope_node, scope_node.endpos, {})
-        if scope_nodes then
+        if scope_nodes and #scope_nodes > 0 then
           for _, node in ipairs(scope_nodes) do
             if
               (node.is_Id or node.is_IdDecl)
@@ -97,9 +97,15 @@ return function(request_id, request_params, current_file, ast)
         if current_node.attr.metafunc then
           local scope_node = current_node.attr.scope.node
           local scope_nodes, err = find_nodes_in_scope_node(scope_node, scope_node.endpos, {})
-          if scope_nodes then
+          if scope_nodes and #scope_nodes > 0 then
             for _, node in ipairs(scope_nodes) do
-              if node.is_DotIndex and node[1] == current_node[1] then
+              if
+                node[1] == current_node[1]
+                and (
+                  tostring(node.attr.type) == tostring(current_node.attr.type)
+                  or tostring(node.attr.calleetype) == tostring(current_node.attr.type)
+                )
+              then
                 local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file)
                 table.insert(changes[request_params.textDocument.uri], {
                   ---@type Range
@@ -125,7 +131,7 @@ return function(request_id, request_params, current_file, ast)
           local scope_node = parent_node.attr.scope.node
           local scope_nodes, err = find_nodes_in_scope_node(scope_node, scope_node.endpos, {})
           if parent_node.attr.type.is_record or parent_node.attr.type.is_union then
-            if scope_nodes then
+            if scope_nodes and #scope_nodes > 0 then
               for _, node in ipairs(scope_nodes) do
                 if node.is_DotIndex and node[1] == current_node[1] then
                   local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file)
@@ -171,7 +177,7 @@ return function(request_id, request_params, current_file, ast)
               end
             end
           elseif parent_node.attr.value and parent_node.attr.value.is_enum then
-            if scope_nodes then
+            if scope_nodes and #scope_nodes > 0 then
               for _, node in ipairs(scope_nodes) do
                 if node.is_DotIndex and node[1] == current_node[1] then
                   local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file)
@@ -215,6 +221,75 @@ return function(request_id, request_params, current_file, ast)
               end
             end
           end
+        end
+      end,
+      [current_node.is_ColonIndex or false] = function()
+        if current_node.attr.metafunc then
+          local scope_node = current_node.attr.scope.node
+          local scope_nodes, err = find_nodes_in_scope_node(scope_node, scope_node.endpos, {})
+          if scope_nodes and #scope_nodes > 0 then
+            for _, node in ipairs(scope_nodes) do
+              if
+                node[1] == current_node[1]
+                and (
+                  tostring(node.attr.type) == tostring(current_node.attr.type)
+                  or tostring(node.attr.calleetype) == tostring(current_node.attr.type)
+                )
+              then
+                local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file)
+                table.insert(changes[request_params.textDocument.uri], {
+                  ---@type Range
+                  range = {
+                    start = {
+                      line = s_line,
+                      character = s_char,
+                    },
+                    ["end"] = {
+                      line = s_line,
+                      character = s_char + #node[1],
+                    },
+                  },
+                  newText = request_params.newName,
+                })
+              end
+            end
+          else
+            logger.log(err)
+          end
+        end
+      end,
+      [current_node.is_CallMethod or false] = function()
+        local scope_node = current_node.attr.calleesym.scope.node
+        local scope_nodes, err = find_nodes_in_scope_node(scope_node, scope_node.endpos, {})
+        logger.log(#scope_nodes)
+        if scope_nodes and #scope_nodes > 0 then
+          for _, node in ipairs(scope_nodes) do
+            if
+              node[1] == current_node[1]
+              and (
+                tostring(node.attr.type) == tostring(current_node.attr.calleetype)
+                or tostring(node.attr.calleetype) == tostring(current_node.attr.calleetype)
+              )
+            then
+              local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file)
+              table.insert(changes[request_params.textDocument.uri], {
+                ---@type Range
+                range = {
+                  start = {
+                    line = s_line,
+                    character = s_char,
+                  },
+                  ["end"] = {
+                    line = s_line,
+                    character = s_char + #node[1],
+                  },
+                },
+                newText = request_params.newName,
+              })
+            end
+          end
+        else
+          logger.log(err)
         end
       end,
     })
