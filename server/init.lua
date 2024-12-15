@@ -39,16 +39,16 @@ end
 ---@param current_file string
 ---@param request_params table
 ---@return string
-function server.did_change(current_file, request_params)
-  for _, change in ipairs(request_params.contentChanges) do
-    local ss = sstream()
-    local start_pos = find_pos(current_file, change.range.start.line, change.range.start.character)
-    local end_pos = find_pos(current_file, change.range["end"].line, change.range["end"].character)
-    ss:addmany(current_file:sub(1, start_pos - 1), change.text, current_file:sub(end_pos, #current_file))
-    current_file = ss:tostring()
-  end
-  return current_file
-end
+-- function server.did_change(current_file, request_params)
+-- for _, change in ipairs(request_params.contentChanges) do
+--   local ss = sstream()
+--   local start_pos = find_pos(current_file, change.range.start.line, change.range.start.character)
+--   local end_pos = find_pos(current_file, change.range["end"].line, change.range["end"].character)
+--   ss:addmany(current_file:sub(1, start_pos - 1), change.text, current_file:sub(end_pos))
+--   current_file = ss:tostring()
+-- end
+-- return current_file
+-- end
 
 ---@param request_id integer
 ---@param request_params table

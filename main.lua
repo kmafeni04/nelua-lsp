@@ -1,5 +1,4 @@
 -- TODO: If workspace folder is provided, use that instead of the git root path
--- TODO: Switch from full content caching to incremental
 
 local rpc = require("utils.rpc")
 local switch = require("lib.switch")
@@ -54,7 +53,7 @@ while true do
         end
       end,
       ["textDocument/didChange"] = function()
-        current_file = server.did_change(current_file, request.params)
+        current_file = request.params.contentChanges[1].text
         documents[current_uri] = current_file
 
         local ast = server.diagnostic(current_file, current_file_path, current_uri)
@@ -63,6 +62,10 @@ while true do
         end
       end,
       ["textDocument/didSave"] = function()
+        local current_file_prog <close> = io.open(current_file_path)
+        if current_file_prog then
+          current_file = current_file_prog:read("a")
+        end
         local ast = server.diagnostic(current_file, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
