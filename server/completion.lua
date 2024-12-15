@@ -650,7 +650,9 @@ return function(request_id, request_params, current_uri, current_file_path, curr
           local loop_nodes = node[1][2][2][1][2]
           for _, loop_node in pairs(loop_nodes) do
             if
-              not loop_node.attr.name:match("^__.*")
+              loop_node.attr
+              and loop_node.attr.name
+              and not loop_node.attr.name:match("^__.*")
               and not symbols[loop_node.attr.name .. "//" .. tostring(loop_node.attr.type)]
             then
               symbols[loop_node.attr.name .. "//" .. tostring(loop_node.attr.type)] = {
