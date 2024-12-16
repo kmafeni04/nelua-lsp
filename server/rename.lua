@@ -7,10 +7,10 @@ local pos_to_line_and_char = require("utils.pos_to_line_char")
 
 ---@param node table
 ---@param pos integer
----@param foundnodes table
----@return table?
+---@param found_nodes table
+---@return table? found_nodes
 ---@return string? err
-local function find_nodes_in_scope_node(node, pos, foundnodes)
+local function find_nodes_in_scope_node(node, pos, found_nodes)
   if type(node) ~= "table" then
     return nil, "Node passed to find_nodes_in_scope_node was not a table"
   end
@@ -35,13 +35,13 @@ local function find_nodes_in_scope_node(node, pos, foundnodes)
       )
     )
   then
-    foundnodes[#foundnodes + 1] = node
+    found_nodes[#found_nodes + 1] = node
   end
 
   for i = 1, node.nargs or #node do
-    find_nodes_in_scope_node(node[i], pos, foundnodes)
+    find_nodes_in_scope_node(node[i], pos, found_nodes)
   end
-  return foundnodes, nil
+  return found_nodes, nil
 end
 
 ---@param request_id integer
