@@ -767,7 +767,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                 and last_node[2].attr.type
               then
                 local node_type = last_node[2].attr.type
-                if node_type.fields then
+                if node_type.fields and not node_type.is_enum then
                   for field_name, field in pairs(node_type.fields) do
                     if type(field_name) == "string" and type(field) == "table" then
                       gen_completion(
