@@ -22,3 +22,5 @@ This is an early implementation of writing an LSP server the for [nelua](https:/
 ```sh
   nelua -L /path/to/nelua-lsp --script /path/to/nelua-lsp/main.lua
 ```
+
+Read [EDITORS.md](EDITORS.md) to see how to use it in your code editor.
