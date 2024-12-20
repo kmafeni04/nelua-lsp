@@ -12,7 +12,7 @@ local documents = {}
 ---@type table<string, table>
 local ast_cache = {}
 local current_uri = ""
-local current_file = ""
+local current_file_content = ""
 local current_file_path = ""
 ---@type string
 local root_path = io.popen("git rev-parse --show-toplevel 2>&1"):read("l")
@@ -44,19 +44,19 @@ while true do
           root_path = current_uri:sub(#"file:///"):gsub("/[^/]+%.nelua", "")
         end
 
-        current_file = request.params.textDocument.text
-        documents[current_uri] = current_file
+        current_file_content = request.params.textDocument.text
+        documents[current_uri] = current_file_content
 
-        local ast = server.diagnostic(current_file, current_file_path, current_uri)
+        local ast = server.diagnostic(current_file_content, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
       end,
       ["textDocument/didChange"] = function()
-        current_file = request.params.contentChanges[1].text
-        documents[current_uri] = current_file
+        current_file_content = server.did_change(current_file_content, request.paramsa)
+        documents[current_uri] = current_file_content
 
-        local ast = server.diagnostic(current_file, current_file_path, current_uri)
+        local ast = server.diagnostic(current_file_content, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -64,16 +64,16 @@ while true do
       ["textDocument/didSave"] = function()
         local current_file_prog <close> = io.open(current_file_path)
         if current_file_prog then
-          current_file = current_file_prog:read("a")
+          current_file_content = current_file_prog:read("a")
         end
-        local ast = server.diagnostic(current_file, current_file_path, current_uri)
+        local ast = server.diagnostic(current_file_content, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
       end,
       ["textDocument/completion"] = function()
         local ast =
-          server.completion(request.id, request.params, current_uri, current_file_path, current_file, ast_cache)
+          server.completion(request.id, request.params, current_uri, current_file_path, current_file_content, ast_cache)
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -81,22 +81,22 @@ while true do
       ["textDocument/hover"] = function()
         local current_line = request.params.position.line
         local current_char = request.params.position.character
-        current_file = documents[current_uri]
+        current_file_content = documents[current_uri]
         local ast = ast_cache[current_uri]
 
-        server.hover(request.id, current_file, current_file_path, current_line, current_char, ast)
+        server.hover(request.id, current_file_content, current_file_path, current_line, current_char, ast)
       end,
       ["textDocument/definition"] = function()
         local current_line = request.params.position.line
         local current_char = request.params.position.character
-        current_file = documents[current_uri]
+        current_file_content = documents[current_uri]
         local ast = ast_cache[current_uri]
 
         server.definition(
           request.id,
           root_path,
           documents,
-          current_file,
+          current_file_content,
           current_file_path,
           current_line,
           current_char,
@@ -104,7 +104,7 @@ while true do
         )
       end,
       ["textDocument/rename"] = function()
-        server.rename(request.id, request.params, current_file, ast_cache[current_uri])
+        server.rename(request.id, request.params, current_file_content, ast_cache[current_uri])
       end,
       ["textDocument/didClose"] = function()
         documents[current_uri] = nil

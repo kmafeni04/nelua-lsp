@@ -46,15 +46,15 @@ end
 
 ---@param request_id integer
 ---@param request_params table
----@param current_file string,
+---@param current_file_content string,
 ---@param ast table
-return function(request_id, request_params, current_file, ast)
+return function(request_id, request_params, current_file_content, ast)
   local changes = {
     [request_params.textDocument.uri] = {},
   }
   ---@type Position
   local position = request_params.position
-  local found_nodes, err = find_nodes(current_file, position.line, position.character, ast)
+  local found_nodes, err = find_nodes(current_file_content, position.line, position.character, ast)
   if found_nodes then
     local current_node = found_nodes[#found_nodes]
     switch(true, {
@@ -72,7 +72,7 @@ return function(request_id, request_params, current_file, ast)
               and node.attr.type
               and tostring(node.attr.type) == tostring(current_node.attr.type)
             then
-              local s_line, s_char = pos_to_line_and_char(node.pos, current_file)
+              local s_line, s_char = pos_to_line_and_char(node.pos, current_file_content)
               table.insert(changes[request_params.textDocument.uri], {
                 ---@type Range
                 range = {
@@ -106,7 +106,7 @@ return function(request_id, request_params, current_file, ast)
                   or tostring(node.attr.calleetype) == tostring(current_node.attr.type)
                 )
               then
-                local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file)
+                local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file_content)
                 table.insert(changes[request_params.textDocument.uri], {
                   ---@type Range
                   range = {
@@ -134,7 +134,7 @@ return function(request_id, request_params, current_file, ast)
             if scope_nodes and #scope_nodes > 0 then
               for _, node in ipairs(scope_nodes) do
                 if node.is_DotIndex and node[1] == current_node[1] then
-                  local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file)
+                  local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file_content)
                   table.insert(changes[request_params.textDocument.uri], {
                     ---@type Range
                     range = {
@@ -157,7 +157,7 @@ return function(request_id, request_params, current_file, ast)
             for _, node_fields in ipairs(parent_node.attr.type.node) do
               if type(node_fields) == "table" then
                 if node_fields[1] == current_node[1] then
-                  local s_line, s_char = pos_to_line_and_char(node_fields.pos, current_file)
+                  local s_line, s_char = pos_to_line_and_char(node_fields.pos, current_file_content)
                   table.insert(changes[request_params.textDocument.uri], {
                     ---@type Range
                     range = {
@@ -180,7 +180,7 @@ return function(request_id, request_params, current_file, ast)
             if scope_nodes and #scope_nodes > 0 then
               for _, node in ipairs(scope_nodes) do
                 if node.is_DotIndex and node[1] == current_node[1] then
-                  local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file)
+                  local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file_content)
                   table.insert(changes[request_params.textDocument.uri], {
                     ---@type Range
                     range = {
@@ -202,7 +202,7 @@ return function(request_id, request_params, current_file, ast)
             end
             for _, node_fields in ipairs(parent_node.attr.value.node[2]) do
               if type(node_fields) == "table" then
-                local s_line, s_char = pos_to_line_and_char(node_fields.pos, current_file)
+                local s_line, s_char = pos_to_line_and_char(node_fields.pos, current_file_content)
                 table.insert(changes[request_params.textDocument.uri], {
                   ---@type Range
                   range = {
@@ -236,7 +236,7 @@ return function(request_id, request_params, current_file, ast)
                   or tostring(node.attr.calleetype) == tostring(current_node.attr.type)
                 )
               then
-                local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file)
+                local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file_content)
                 table.insert(changes[request_params.textDocument.uri], {
                   ---@type Range
                   range = {
@@ -271,7 +271,7 @@ return function(request_id, request_params, current_file, ast)
                 or tostring(node.attr.calleetype) == tostring(current_node.attr.calleetype)
               )
             then
-              local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file)
+              local s_line, s_char = pos_to_line_and_char(node.pos + 1, current_file_content)
               table.insert(changes[request_params.textDocument.uri], {
                 ---@type Range
                 range = {

@@ -63,15 +63,24 @@ end
 ---@param request_id integer
 ---@param root_path string
 ---@param documents table<string, string>
----@param current_file string
+---@param current_file_content string
 ---@param current_file_path string
 ---@param current_line integer
 ---@param current_char integer
 ---@param ast? table
-return function(request_id, root_path, documents, current_file, current_file_path, current_line, current_char, ast)
+return function(
+  request_id,
+  root_path,
+  documents,
+  current_file_content,
+  current_file_path,
+  current_line,
+  current_char,
+  ast
+)
   local locs = nil
   if ast then
-    local found_nodes, err = find_nodes(current_file, current_line, current_char, ast)
+    local found_nodes, err = find_nodes(current_file_content, current_line, current_char, ast)
     if found_nodes then
       local current_node = found_nodes[#found_nodes]
 

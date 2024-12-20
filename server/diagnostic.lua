@@ -124,14 +124,14 @@ local function create_diagnostic_fields(analysis, analysis_match, severity, curr
   return diagnostic
 end
 
----@param current_file string
+---@param current_file_content string
 ---@param current_file_path string
 ---@param current_uri string
 ---@return table? ast
-return function(current_file, current_file_path, current_uri)
-  current_file = current_file
+return function(current_file_content, current_file_path, current_uri)
+  current_file_content = current_file_content
   local diagnostics = {}
-  local ast, err = analyze_ast(current_file, current_file_path)
+  local ast, err = analyze_ast(current_file_content, current_file_path)
   if err then
     if err.message:match(":%s*error:") then
       local diag = create_diagnostic_fields(
@@ -202,7 +202,7 @@ return function(current_file, current_file_path, current_uri)
       then
         local pos = node.pos
         unused = true
-        local s_line, s_char = pos_to_line_and_char(pos, current_file)
+        local s_line, s_char = pos_to_line_and_char(pos, current_file_content)
         local ss = sstream()
         local msg = ""
         ss:add("Unused")

@@ -9,12 +9,12 @@ local pos_to_line_and_char = require("utils.pos_to_line_char")
 local response = require("utils.response")
 
 ---@param request_id integer
----@param current_file string
+---@param current_file_content string
 ---@param current_file_path string
 ---@param current_line integer
 ---@param current_char integer
 ---@param ast table?
-return function(request_id, current_file, current_file_path, current_line, current_char, ast)
+return function(request_id, current_file_content, current_file_path, current_line, current_char, ast)
   local ss = sstream()
 
   ---@param file string
@@ -35,7 +35,7 @@ return function(request_id, current_file, current_file_path, current_line, curre
 
   local content = ""
   if ast then
-    local found_nodes, err = find_nodes(current_file, current_line, current_char, ast)
+    local found_nodes, err = find_nodes(current_file_content, current_line, current_char, ast)
 
     if found_nodes then
       local current_node = found_nodes[#found_nodes]
@@ -86,7 +86,7 @@ return function(request_id, current_file, current_file_path, current_line, curre
         end
         ss:add("\n```")
         if current_node.is_IdDecl then
-          add_doc(current_file, current_file_path, current_node.pos)
+          add_doc(current_file_content, current_file_path, current_node.pos)
         elseif current_node.attr.node then
           add_doc(current_node.attr.node.src.content, current_node.attr.node.src.name, current_node.attr.node.pos)
         end
@@ -150,7 +150,7 @@ return function(request_id, current_file, current_file_path, current_line, curre
         content = ss:tostring()
       elseif current_node.is_FuncDef then
         ss:addmany(current_node.attr.name, "\n```nelua\nType: ", tostring(current_node.attr.type), "\n```\n")
-        add_doc(current_file, current_file_path, current_node.pos)
+        add_doc(current_file_content, current_file_path, current_node.pos)
         content = ss:tostring()
       elseif current_node.is_ColonIndex then
         ss:addmany(current_node.attr.name, "\n```nelua\n", "Type: ", current_node.attr.type, "\n```")

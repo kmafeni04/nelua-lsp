@@ -6,14 +6,14 @@ local generator = require("nelua.cgenerator")
 
 local logger = require("utils.logger")
 
----@param current_file string
+---@param current_file_content string
 ---@param current_file_path string
 ---@return table? ast
 ---@return table? err
-return function(current_file, current_file_path)
+return function(current_file_content, current_file_path)
   local ast
   local ok, err = except.trycall(function()
-    ast = aster.parse(current_file, current_file_path)
+    ast = aster.parse(current_file_content, current_file_path)
     local context = AnalyzerContext(analyzer.visitors, ast, generator)
     except.try(function()
       context = analyzer.analyze(context)

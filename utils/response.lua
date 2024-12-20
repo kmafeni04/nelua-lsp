@@ -25,7 +25,7 @@ function response.initialize(request_id)
     id = request_id,
     result = {
       capabilities = {
-        textDocumentSync = 1,
+        textDocumentSync = 2,
         completionProvider = { triggerCharacters = { ".", ":", "@", "*", "&", "$" } },
         hoverProvider = true,
         renameProvider = true,

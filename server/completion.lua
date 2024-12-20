@@ -72,14 +72,14 @@ local comp_item_kind = {
   TypeParameter = 25,
 }
 
----@param current_file string
+---@param current_file_content string
 ---@param current_line integer
 ---@param current_char integer
 ---@return integer
-local function find_pos(current_file, current_line, current_char)
+local function find_pos(current_file_content, current_line, current_char)
   local i = 0
   local pos = 0
-  for line in current_file:gmatch("[^\r\n]*\r?\n") do
+  for line in current_file_content:gmatch("[^\r\n]*\r?\n") do
     if i == current_line then
       pos = pos + current_char
       break
@@ -580,10 +580,10 @@ end
 ---@param request_params table
 ---@param current_uri string
 ---@param current_file_path string
----@param current_file string
+---@param current_file_content string
 ---@param ast_cache table<string, table>
 ---@return table? ast
-return function(request_id, request_params, current_uri, current_file_path, current_file, ast_cache)
+return function(request_id, request_params, current_uri, current_file_path, current_file_content, ast_cache)
   local current_line = request_params.position.line
   local current_char = request_params.position.character
 
@@ -605,8 +605,8 @@ return function(request_id, request_params, current_uri, current_file_path, curr
   --     end
   --   end
   -- end
-  local content = current_file
-  local _pos = find_pos(current_file, current_line, current_char)
+  local content = current_file_content
+  local _pos = find_pos(current_file_content, current_line, current_char)
   -- some hack for get ast node
   local before = content:sub(1, _pos - 1):gsub("%a%w*$", "")
   local after = content:sub(_pos):gsub("^[%.:]?%a%w*", "")
@@ -628,7 +628,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
     ast_cache[current_uri] = ast
   else
     pos = _pos
-    content = current_file
+    content = current_file_content
     line = current_line
     char = current_char
     ast = ast_cache[current_uri]
