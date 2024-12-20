@@ -19,3 +19,26 @@ command = "nelua"
 args = ["-L", "path/to/nelua-lsp", "--script", "path/to/nelua-lsp/main.lua"]
 ```
 
+## VS code
+
+Using the [vscode-lspconfig](https://marketplace.visualstudio.com/items?itemName=whtsht.vscode-lspconfig), add this to your settings.json
+
+```json
+"vscode-lspconfig.serverConfigurations": [
+    {
+      "name": "nelua",
+      "document_selector": [
+        {
+          "language": "nelua"
+        }
+      ],
+      "command": [
+        "nelua",
+        "-L",
+        "/path/to/nelua-lsp",
+        "--script",
+        "/path/to/nelua-lsp/main.lua"
+      ]
+    }
+  ]
+```

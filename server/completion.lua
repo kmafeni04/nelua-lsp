@@ -308,7 +308,6 @@ local function gen_lib_types_completions(comp_list)
   gen_completion("hash", comp_item_kind.Class, "", "hash", insert_text_format.PlainText, comp_list)
 
   gen_completion("Allocator", comp_item_kind.Class, "", "Allocator", insert_text_format.PlainText, comp_list)
-  -- gen_completion("Allocator", comp_item_kind.Class, "", "Allocator", insert_text_format.PlainText, comp_list)
 end
 
 ---@param comp_list CompItem[]
@@ -625,9 +624,6 @@ return function(request_id, request_params, current_uri, current_file_path, curr
 
   local pos = #before
   local line, char = pos_to_line_and_char(_pos, content)
-  -- if err then
-  --   logger.log(err)
-  -- end
   if ast then
     ast_cache[current_uri] = ast
   else
@@ -672,11 +668,6 @@ return function(request_id, request_params, current_uri, current_file_path, curr
       end
       gen_symbols(ast.scope, pos, current_file_path, symbols)
       gen_symbol_completions(comp_list, symbols)
-      -- local current_node = found_nodes[#found_nodes]
-      -- if current_node.is_String then
-      --   comp_list = {}
-      --   goto COMP_RESPONSE
-      -- end
       if request_params.context and request_params.context.triggerKind == 2 then
         local trig_char = request_params.context.triggerCharacter
         comp_list = {}
