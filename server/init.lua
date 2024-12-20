@@ -1,9 +1,7 @@
-local sstream = require("nelua.utils.sstream")
-
 local logger = require("utils.logger")
 local response = require("utils.response")
-local find_pos = require("utils.find_pos")
 
+local did_change = require("server.did_change")
 local diagnostic = require("server.diagnostic")
 local completion = require("server.completion")
 local hover = require("server.hover")
@@ -40,14 +38,7 @@ end
 ---@param request_params table
 ---@return string
 function server.did_change(current_file_content, request_params)
-  for _, change in ipairs(request_params.contentChanges) do
-    local ss = sstream()
-    local start_pos = find_pos(current_file_content, change.range.start.line, change.range.start.character)
-    local end_pos = find_pos(current_file_content, change.range["end"].line, change.range["end"].character)
-    ss:addmany(current_file_content:sub(1, start_pos - 1), change.text, current_file_content:sub(end_pos))
-    current_file_content = ss:tostring()
-  end
-  return current_file_content
+  return did_change(current_file_content, request_params)
 end
 
 ---@param request_id integer
