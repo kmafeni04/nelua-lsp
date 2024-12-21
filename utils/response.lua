@@ -54,12 +54,12 @@ end
 ---@field insertTextFormat integer
 
 ---@param request_id integer
----@param comp_list CompItem[]
-function response.completion(request_id, comp_list)
+---@param comp_items CompItem[]
+function response.completion(request_id, comp_items)
   local completion_response = {
     jsonrpc = "2.0",
     id = request_id,
-    result = comp_list,
+    result = comp_items,
     -- error = { code = lsp_error_codes.RequestFailed, message = "Failed to create completion list" },
   }
   local encoded_msg, err = rpc.encode(completion_response)

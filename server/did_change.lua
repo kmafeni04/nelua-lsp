@@ -17,7 +17,7 @@ return function(current_file_content, request_params)
     local end_char = change.range["end"].character + 1
     local text = change.text
 
-    if start_line == end_line then
+    if lines[start_line] and start_line == end_line then
       lines[start_line] = lines[start_line]:sub(1, start_char - 1) .. text .. lines[start_line]:sub(end_char)
     elseif lines[end_line] then
       ---@type string[]
@@ -39,7 +39,7 @@ return function(current_file_content, request_params)
               offset = offset + 1
             end
           end
-        else
+        elseif lines[current_line - 1] then
           table.remove(lines, current_line - 1)
           offset = offset - 1
         end

@@ -5,6 +5,7 @@ local response = require("utils.response")
 local logger = require("utils.logger")
 local analyze_ast = require("utils.analyze_ast")
 local find_nodes = require("utils.find_nodes")
+local find_pos = require("utils.find_pos")
 local pos_to_line_and_char = require("utils.pos_to_line_char")
 
 local keywords = {
@@ -71,24 +72,6 @@ local comp_item_kind = {
   Operator = 24,
   TypeParameter = 25,
 }
-
----@param current_file_content string
----@param current_line integer
----@param current_char integer
----@return integer
-local function find_pos(current_file_content, current_line, current_char)
-  local i = 0
-  local pos = 0
-  for line in current_file_content:gmatch("[^\r\n]*\r?\n") do
-    if i == current_line then
-      pos = pos + current_char
-      break
-    end
-    i = i + 1
-    pos = pos + #line
-  end
-  return pos + 1
-end
 
 ---@param label string
 ---@param kind CompItemKind
@@ -589,12 +572,12 @@ return function(request_id, request_params, current_uri, current_file_path, curr
 
   local symbols = {}
   ---@type CompItem[]
-  local comp_list = {}
+  local comp_items = {}
 
-  gen_keywords(comp_list)
-  gen_snippets(comp_list)
-  gen_builtin_funcs(comp_list)
-  gen_types(comp_list)
+  gen_keywords(comp_items)
+  gen_snippets(comp_items)
+  gen_builtin_funcs(comp_items)
+  gen_types(comp_items)
   -- TODO: NOT PERFORMANT
   -- local mark = {}
   -- for _, doc in pairs(documents) do
@@ -667,18 +650,18 @@ return function(request_id, request_params, current_uri, current_file_path, curr
         end
       end
       gen_symbols(ast.scope, pos, current_file_path, symbols)
-      gen_symbol_completions(comp_list, symbols)
+      gen_symbol_completions(comp_items, symbols)
       if request_params.context and request_params.context.triggerKind == 2 then
         local trig_char = request_params.context.triggerCharacter
-        comp_list = {}
+        comp_items = {}
         switch(trig_char, {
           [{ "@", "*" }] = function()
-            gen_types(comp_list)
+            gen_types(comp_items)
             for key, symbol in pairs(symbols) do
               local name = key:match(SYMBOL_NAME_MATCH)
               local node = symbol.node
               if node and node.attr.type.is_type then
-                gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
+                gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_items)
               end
             end
           end,
@@ -693,7 +676,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                   node.attr.name .. "\n```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
                   name,
                   insert_text_format.PlainText,
-                  comp_list
+                  comp_items
                 )
               end
             end
@@ -709,7 +692,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                   node.attr.name .. "\n```nelua\nType: " .. tostring(node.attr.type) .. "\n```",
                   name,
                   insert_text_format.PlainText,
-                  comp_list
+                  comp_items
                 )
               end
             end
@@ -731,7 +714,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                           .. tostring(field.value),
                         field_name,
                         insert_text_format.PlainText,
-                        comp_list
+                        comp_items
                       )
                     end
                   end
@@ -747,7 +730,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                       field_name .. "\n```nelua\nType: " .. tostring(field.type),
                       field_name,
                       insert_text_format.PlainText,
-                      comp_list
+                      comp_items
                     )
                   end
                 end
@@ -767,7 +750,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                         field_name .. "\n```nelua\nType: " .. tostring(field.type),
                         field_name,
                         insert_text_format.PlainText,
-                        comp_list
+                        comp_items
                       )
                     end
                   end
@@ -783,7 +766,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                             field_name .. "\n```nelua\nType: " .. tostring(field.type),
                             field_name,
                             insert_text_format.PlainText,
-                            comp_list
+                            comp_items
                           )
                         end
                       end
@@ -804,7 +787,7 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                     field_name .. "\n```nelua\nType: " .. tostring(field.type),
                     field_name,
                     insert_text_format.PlainText,
-                    comp_list
+                    comp_items
                   )
                 end
               elseif
@@ -813,12 +796,12 @@ return function(request_id, request_params, current_uri, current_file_path, curr
                 or last_node.is_RecordType
                 or last_node.is_UnionType
               then
-                gen_types(comp_list)
+                gen_types(comp_items)
                 for key, symbol in pairs(symbols) do
                   local name = key:match(SYMBOL_NAME_MATCH)
                   local node = symbol.node
                   if node and node.attr and node.attr.type and node.attr.type.is_type then
-                    gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_list)
+                    gen_completion(name, comp_item_kind.Class, "", name, insert_text_format.PlainText, comp_items)
                   end
                 end
               end
@@ -830,5 +813,52 @@ return function(request_id, request_params, current_uri, current_file_path, curr
       logger.log(find_err)
     end
   end
-  response.completion(request_id, comp_list)
+
+  ---@param items CompItem[]
+  ---@param prefix string
+  ---@return CompItem[]
+  local function sort_items_by_prefix(items, prefix)
+    ---@type CompItem[]
+    local sorted_items = {}
+    for i, v in ipairs(items) do
+      sorted_items[i] = v
+    end
+
+    table.sort(sorted_items, function(a, b)
+      local a_has_prefix = a.label:sub(1, #prefix) == prefix
+      local b_has_prefix = b.label:sub(1, #prefix) == prefix
+
+      if a_has_prefix == b_has_prefix then
+        return a.label < b.label
+      end
+
+      return a_has_prefix
+    end)
+
+    return sorted_items
+  end
+
+  local current_prefix = ""
+  local prefix_pos = find_pos(current_file_content, current_line, current_char) - 1
+  while true do
+    local c = current_file_content:sub(prefix_pos, prefix_pos)
+    if not c:match("[%w_]") then
+      break
+    end
+    prefix_pos = prefix_pos - 1
+    current_prefix = c .. current_prefix
+  end
+
+  local sorted_items = sort_items_by_prefix(comp_items, current_prefix)
+  ---@type CompItem[]
+  local items = {}
+
+  for i, v in pairs(sorted_items) do
+    if i > 100 then
+      break
+    end
+    table.insert(items, v)
+  end
+
+  response.completion(request_id, items)
 end

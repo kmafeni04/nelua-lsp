@@ -78,6 +78,7 @@ while true do
           ast_cache[current_uri] = ast
         end
       end,
+      ["completionItem/resolve"] = function() end,
       ["textDocument/hover"] = function()
         local current_line = request.params.position.line
         local current_char = request.params.position.character
