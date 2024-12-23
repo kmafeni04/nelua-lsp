@@ -6,7 +6,7 @@ local logger = require("utils.logger")
 return function(current_file_content, request_params)
   ---@type string[]
   local lines = {}
-  for line in string.gmatch(current_file_content .. "\n", "([^\r\n]-)\r?\n") do
+  for line in string.gmatch(current_file_content .. "\n", "([^\n]-)\n") do
     table.insert(lines, line)
   end
 
@@ -18,11 +18,12 @@ return function(current_file_content, request_params)
     local text = change.text
 
     if lines[start_line] and start_line == end_line then
-      lines[start_line] = lines[start_line]:sub(1, start_char - 1) .. text .. lines[start_line]:sub(end_char)
-    elseif lines[end_line] then
+      lines[start_line] =
+        table.concat({ lines[start_line]:sub(1, start_char - 1), text, lines[start_line]:sub(end_char) })
+    else
       ---@type string[]
       local change_lines = {}
-      for change_line in string.gmatch(text .. "\n", "([^\r\n]-)\r?\n") do
+      for change_line in string.gmatch(text .. "\n", "([^\n]-)\n") do
         table.insert(change_lines, change_line)
       end
 
@@ -33,7 +34,7 @@ return function(current_file_content, request_params)
         if ci <= #change_lines then
           if change_lines[ci] then
             if current_line == start_line then
-              lines[current_line] = lines[current_line]:sub(1, start_char - 1) .. change_lines[ci]
+              lines[current_line] = table.concat({ lines[current_line]:sub(1, start_char - 1), change_lines[ci] })
             else
               table.insert(lines, current_line, change_lines[ci])
               offset = offset + 1
@@ -42,8 +43,7 @@ return function(current_file_content, request_params)
         elseif lines[current_line - 1] then
           table.remove(lines, current_line - 1)
           offset = offset - 1
-        end
-        if ci == #lines then
+        elseif ci == #lines then
           table.remove(lines, ci)
           offset = offset - 1
         end
@@ -53,6 +53,5 @@ return function(current_file_content, request_params)
   end
 
   local new_file_content = table.concat(lines, "\n")
-  logger.log(new_file_content)
   return new_file_content
 end

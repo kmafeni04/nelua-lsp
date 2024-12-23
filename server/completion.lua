@@ -561,12 +561,13 @@ end
 
 ---@param request_id integer
 ---@param request_params table
+---@param documents table<string, string>
 ---@param current_uri string
 ---@param current_file_path string
 ---@param current_file_content string
 ---@param ast_cache table<string, table>
 ---@return table? ast
-return function(request_id, request_params, current_uri, current_file_path, current_file_content, ast_cache)
+return function(request_id, request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
   local current_line = request_params.position.line
   local current_char = request_params.position.character
 
@@ -578,16 +579,6 @@ return function(request_id, request_params, current_uri, current_file_path, curr
   gen_snippets(comp_items)
   gen_builtin_funcs(comp_items)
   gen_types(comp_items)
-  -- TODO: NOT PERFORMANT
-  -- local mark = {}
-  -- for _, doc in pairs(documents) do
-  --   for word in doc:gmatch("%f[%w_][%w_]+%f[^%w_]") do
-  --     if not mark[word] then
-  --       mark[word] = true
-  --       gen_completion(word, comp_item_kind.Text, "", word, insert_text_format.PlainText)
-  --     end
-  --   end
-  -- end
   local content = current_file_content
   local _pos = find_pos(current_file_content, current_line, current_char)
   -- some hack for get ast node
@@ -817,25 +808,29 @@ return function(request_id, request_params, current_uri, current_file_path, curr
   ---@param items CompItem[]
   ---@param prefix string
   ---@return CompItem[]
-  local function sort_items_by_prefix(items, prefix)
-    ---@type CompItem[]
-    local sorted_items = {}
-    for i, v in ipairs(items) do
-      sorted_items[i] = v
-    end
-
-    table.sort(sorted_items, function(a, b)
+  local function get_prefixed_completions(items, prefix)
+    table.sort(items, function(a, b)
       local a_has_prefix = a.label:sub(1, #prefix) == prefix
       local b_has_prefix = b.label:sub(1, #prefix) == prefix
-
-      if a_has_prefix == b_has_prefix then
+      if a_has_prefix and b_has_prefix then
         return a.label < b.label
       end
 
       return a_has_prefix
     end)
 
-    return sorted_items
+    local prefixed_items = {}
+
+    for i, item in ipairs(items) do
+      if i > 10 then
+        break
+      end
+      if item.label:sub(1, #prefix) == prefix then
+        table.insert(prefixed_items, item)
+      end
+    end
+
+    return prefixed_items
   end
 
   local current_prefix = ""
@@ -849,15 +844,21 @@ return function(request_id, request_params, current_uri, current_file_path, curr
     current_prefix = c .. current_prefix
   end
 
-  local sorted_items = sort_items_by_prefix(comp_items, current_prefix)
   ---@type CompItem[]
-  local items = {}
+  local items = get_prefixed_completions(comp_items, current_prefix)
 
-  for i, v in pairs(sorted_items) do
-    if i > 100 then
-      break
+  if not next(items) then
+    local text_items = {}
+    local mark = {}
+    for _, doc in pairs(documents) do
+      for word in doc:gmatch("[%w_]+") do
+        if not mark[word] then
+          mark[word] = true
+          gen_completion(word, comp_item_kind.Text, "", word, insert_text_format.PlainText, text_items)
+        end
+      end
     end
-    table.insert(items, v)
+    items = get_prefixed_completions(text_items, current_prefix)
   end
 
   response.completion(request_id, items)

@@ -1,4 +1,5 @@
 -- TODO: If workspace folder is provided, use that instead of the git root path
+-- TODO: Figure out what's is causing the lsp to be so slow
 
 local rpc = require("utils.rpc")
 local switch = require("lib.switch")
@@ -72,8 +73,15 @@ while true do
         end
       end,
       ["textDocument/completion"] = function()
-        local ast =
-          server.completion(request.id, request.params, current_uri, current_file_path, current_file_content, ast_cache)
+        local ast = server.completion(
+          request.id,
+          request.params,
+          documents,
+          current_uri,
+          current_file_path,
+          current_file_content,
+          ast_cache
+        )
         if ast then
           ast_cache[current_uri] = ast
         end

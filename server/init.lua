@@ -43,12 +43,29 @@ end
 
 ---@param request_id integer
 ---@param request_params table
+---@param documents table<string, string>
 ---@param current_file_path string
 ---@param current_uri string
 ---@param current_file_content string
 ---@param ast_cache table<string, table>
-function server.completion(request_id, request_params, current_uri, current_file_path, current_file_content, ast_cache)
-  return completion(request_id, request_params, current_uri, current_file_path, current_file_content, ast_cache)
+function server.completion(
+  request_id,
+  request_params,
+  documents,
+  current_uri,
+  current_file_path,
+  current_file_content,
+  ast_cache
+)
+  return completion(
+    request_id,
+    request_params,
+    documents,
+    current_uri,
+    current_file_path,
+    current_file_content,
+    ast_cache
+  )
 end
 
 ---@param request_id integer
