@@ -3,7 +3,8 @@
 
 local rpc = require("utils.rpc")
 local switch = require("lib.switch")
-local server = require("server")
+local server = require("utils.server")
+local method = require("method")
 local logger = require("utils.logger")
 
 logger.init()
@@ -35,7 +36,7 @@ while true do
     logger.log("Method: " .. request.method)
     switch(request.method, {
       ["initialize"] = function()
-        server.initialize(request.id)
+        method.initialize(request.id)
       end,
       ["textDocument/didOpen"] = function()
         local root_path_not_found =
@@ -48,16 +49,16 @@ while true do
         current_file_content = request.params.textDocument.text
         documents[current_uri] = current_file_content
 
-        local ast = server.diagnostic(current_file_content, current_file_path, current_uri)
+        local ast = method.diagnostic(current_file_content, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
       end,
       ["textDocument/didChange"] = function()
-        current_file_content = server.did_change(current_file_content, request.params)
+        current_file_content = method.did_change(current_file_content, request.params)
         documents[current_uri] = current_file_content
 
-        local ast = server.diagnostic(current_file_content, current_file_path, current_uri)
+        local ast = method.diagnostic(current_file_content, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -67,13 +68,13 @@ while true do
         if current_file_prog then
           current_file_content = current_file_prog:read("a")
         end
-        local ast = server.diagnostic(current_file_content, current_file_path, current_uri)
+        local ast = method.diagnostic(current_file_content, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
       end,
       ["textDocument/completion"] = function()
-        local ast = server.completion(
+        local ast = method.completion(
           request.id,
           request.params,
           documents,
@@ -93,7 +94,7 @@ while true do
         current_file_content = documents[current_uri]
         local ast = ast_cache[current_uri]
 
-        server.hover(request.id, current_file_content, current_file_path, current_line, current_char, ast)
+        method.hover(request.id, current_file_content, current_file_path, current_line, current_char, ast)
       end,
       ["textDocument/definition"] = function()
         local current_line = request.params.position.line
@@ -101,7 +102,7 @@ while true do
         current_file_content = documents[current_uri]
         local ast = ast_cache[current_uri]
 
-        server.definition(
+        method.definition(
           request.id,
           root_path,
           documents,
@@ -113,14 +114,14 @@ while true do
         )
       end,
       ["textDocument/rename"] = function()
-        server.rename(request.id, request.params, current_file_content, ast_cache[current_uri])
+        method.rename(request.id, request.params, current_file_content, ast_cache[current_uri])
       end,
       ["textDocument/didClose"] = function()
         documents[current_uri] = nil
         ast_cache[current_uri] = nil
       end,
       ["shutdown"] = function()
-        server.shutdown()
+        method.shutdown()
       end,
       ["exit"] = function()
         os.exit()
