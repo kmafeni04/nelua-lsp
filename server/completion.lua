@@ -1,5 +1,6 @@
 -- TODO: Check how methods for generics like `sequence` work as pressing `:` shows no methods
 local switch = require("lib.switch")
+local get_comments = require("lib.nldoc").get_comments
 
 local response = require("utils.response")
 local logger = require("utils.logger")
@@ -559,6 +560,50 @@ local function gen_symbol_completions(comp_list, symbols)
   end
 end
 
+---@param items CompItem[]
+---@param prefix string
+---@return CompItem[]
+local function get_prefixed_completions(items, prefix)
+  table.sort(items, function(a, b)
+    local a_has_prefix = a.label:sub(1, #prefix) == prefix
+    local b_has_prefix = b.label:sub(1, #prefix) == prefix
+    if a_has_prefix and b_has_prefix then
+      return a.label < b.label
+    end
+
+    return a_has_prefix
+  end)
+
+  local prefixed_items = {}
+
+  for i, item in ipairs(items) do
+    if i > 10 then
+      break
+    end
+    if item.label:sub(1, #prefix) == prefix then
+      table.insert(prefixed_items, item)
+    end
+  end
+
+  return prefixed_items
+end
+
+---@param documents table<string, string>
+---@return CompItem[]
+local function gen_text_completions(documents)
+  local text_items = {}
+  local mark = {}
+  for _, doc in pairs(documents) do
+    for word in doc:gmatch("[%w_]+") do
+      if not mark[word] and not word:sub(1, 1):match("%d") then
+        mark[word] = true
+        gen_completion(word, comp_item_kind.Text, "", word, insert_text_format.PlainText, text_items)
+      end
+    end
+  end
+  return text_items
+end
+
 ---@param request_id integer
 ---@param request_params table
 ---@param documents table<string, string>
@@ -570,6 +615,36 @@ end
 return function(request_id, request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
   local current_line = request_params.position.line
   local current_char = request_params.position.character
+  local _pos = find_pos(current_file_content, current_line, current_char)
+
+  local function get_current_prefix()
+    local current_prefix = ""
+    local prefix_pos = find_pos(current_file_content, current_line, current_char) - 1
+    while true do
+      local c = current_file_content:sub(prefix_pos, prefix_pos)
+      if not c:match("[%w_]") then
+        break
+      end
+      prefix_pos = prefix_pos - 1
+      current_prefix = c .. current_prefix
+    end
+    return current_prefix
+  end
+
+  local _, found_comments = get_comments(current_file_content, current_file_path)
+  local in_comment = false
+  for _, v in ipairs(found_comments) do
+    if v.endpos >= _pos and _pos >= v.pos then
+      in_comment = true
+      break
+    end
+  end
+  if in_comment then
+    local text_items = gen_text_completions(documents)
+    local items = get_prefixed_completions(text_items, get_current_prefix())
+    response.completion(request_id, items)
+    return ast_cache[current_uri]
+  end
 
   local symbols = {}
   ---@type CompItem[]
@@ -579,11 +654,10 @@ return function(request_id, request_params, documents, current_uri, current_file
   gen_snippets(comp_items)
   gen_builtin_funcs(comp_items)
   gen_types(comp_items)
-  local content = current_file_content
-  local _pos = find_pos(current_file_content, current_line, current_char)
+  -- local _pos = find_pos(current_file_content, current_line, current_char)
   -- some hack for get ast node
-  local before = content:sub(1, _pos - 1):gsub("%a%w*$", "")
-  local after = content:sub(_pos):gsub("^[%.:]?%a%w*", "")
+  local before = current_file_content:sub(1, _pos - 1):gsub("%a%w*$", "")
+  local after = current_file_content:sub(_pos):gsub("^[%.:]?%a%w*", "")
   local kind = "normal"
   if before:match("%.$") then
     before = before:sub(1, -2) .. "()"
@@ -592,7 +666,7 @@ return function(request_id, request_params, documents, current_uri, current_file
     before = before:sub(1, -2) .. "()"
     kind = "colon"
   end
-  content = before .. after
+  local content = before .. after
 
   local ast, err = analyze_ast(content, current_file_path)
 
@@ -607,6 +681,7 @@ return function(request_id, request_params, documents, current_uri, current_file
     char = current_char
     ast = ast_cache[current_uri]
   end
+  -- still check if ast exists as the ast cache could still be empty
   if ast then
     local found_nodes, find_err = find_nodes(content, line, char, ast)
     if found_nodes then
@@ -805,61 +880,19 @@ return function(request_id, request_params, documents, current_uri, current_file
     end
   end
 
-  ---@param items CompItem[]
-  ---@param prefix string
-  ---@return CompItem[]
-  local function get_prefixed_completions(items, prefix)
-    table.sort(items, function(a, b)
-      local a_has_prefix = a.label:sub(1, #prefix) == prefix
-      local b_has_prefix = b.label:sub(1, #prefix) == prefix
-      if a_has_prefix and b_has_prefix then
-        return a.label < b.label
-      end
-
-      return a_has_prefix
-    end)
-
-    local prefixed_items = {}
-
-    for i, item in ipairs(items) do
-      if i > 10 then
-        break
-      end
-      if item.label:sub(1, #prefix) == prefix then
-        table.insert(prefixed_items, item)
-      end
-    end
-
-    return prefixed_items
-  end
-
-  local current_prefix = ""
-  local prefix_pos = find_pos(current_file_content, current_line, current_char) - 1
-  while true do
-    local c = current_file_content:sub(prefix_pos, prefix_pos)
-    if not c:match("[%w_]") then
-      break
-    end
-    prefix_pos = prefix_pos - 1
-    current_prefix = c .. current_prefix
-  end
-
   ---@type CompItem[]
-  local items = get_prefixed_completions(comp_items, current_prefix)
+  local items
+  if kind == "normal" then
+    items = get_prefixed_completions(comp_items, get_current_prefix())
+  else
+    items = comp_items
+  end
 
   if not next(items) then
-    local text_items = {}
-    local mark = {}
-    for _, doc in pairs(documents) do
-      for word in doc:gmatch("[%w_]+") do
-        if not mark[word] then
-          mark[word] = true
-          gen_completion(word, comp_item_kind.Text, "", word, insert_text_format.PlainText, text_items)
-        end
-      end
-    end
-    items = get_prefixed_completions(text_items, current_prefix)
+    local text_items = gen_text_completions(documents)
+    items = get_prefixed_completions(text_items, get_current_prefix())
   end
 
   response.completion(request_id, items)
+  return ast
 end

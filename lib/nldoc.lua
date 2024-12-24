@@ -776,8 +776,12 @@ local function generate_doc(emitter, filename, options)
   generator:emit(source, filename, ast, comments, options, emitter)
 end
 
-local function get_comments(source, filename)
-  return parser:parse_comments(source, filename)
+---@param source string
+---@param file_path string
+---@return table<integer, table> comments_by_line
+---@return table comments
+local function get_comments(source, file_path)
+  return parser:parse_comments(source, file_path)
 end
 
 local nldoc = {

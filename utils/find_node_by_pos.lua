@@ -10,7 +10,7 @@ local function find_nodes_by_pos(node, pos, found_nodes)
     return nil, "Node passed to find_nodes_by_pos was not a table"
   end
 
-  if node._astnode and node.pos and pos >= node.pos and node.endpos and pos <= node.endpos then
+  if node._astnode and node.pos and node.pos <= pos and node.endpos and pos <= node.endpos then
     found_nodes[#found_nodes + 1] = node
   end
 
