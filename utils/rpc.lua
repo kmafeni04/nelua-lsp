@@ -1,4 +1,4 @@
-local json = require("lib.json")
+local json = require("libs.json")
 local logger = require("utils.logger")
 
 local rpc = {}

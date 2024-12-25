@@ -1,12 +1,12 @@
 local sstream = require("nelua.utils.sstream")
 
-local switch = require("lib.switch")
-local get_comments = require("lib.nldoc").get_comments
+local switch = require("libs.switch")
+local get_comments = require("libs.nldoc").get_comments
 
 local find_nodes = require("utils.find_nodes")
 local logger = require("utils.logger")
 local pos_to_line_and_char = require("utils.pos_to_line_char")
-local response = require("utils.response")
+local server = require("utils.server")
 
 ---@param request_id integer
 ---@param current_file_content string
@@ -33,7 +33,8 @@ return function(request_id, current_file_content, current_file_path, current_lin
     end
   end
 
-  local content = ""
+  ---@type string?
+  local content
   if ast then
     local found_nodes, err = find_nodes(current_file_content, current_line, current_char, ast)
 
@@ -173,5 +174,12 @@ return function(request_id, current_file_content, current_file_path, current_lin
     end
   end
 
-  response.hover(request_id, content)
+  if content then
+    local result = {
+      contents = content,
+    }
+    server.send_response(request_id, result)
+  else
+    server.send_error(request_id, server.LspErrorCode.RequestFailed, "Failed to provide any hover information")
+  end
 end

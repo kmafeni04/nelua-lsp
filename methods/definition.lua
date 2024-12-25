@@ -1,6 +1,6 @@
 local sstream = require("nelua.utils.sstream")
 
-local response = require("utils.response")
+local server = require("utils.server")
 local logger = require("utils.logger")
 local find_nodes = require("utils.find_nodes")
 
@@ -181,9 +181,11 @@ return function(
         add_new_definition(documents, target_node, locs)
       elseif current_node.is_call then
         local target_node = current_node.attr.calleesym.node
-        -- NOTE: location starts from . so add it to properly calculate name length
-        target_node.attr.name = "." .. current_node[1]
-        add_new_definition(documents, target_node, locs)
+        if target_node then
+          -- NOTE: location starts from . so add it to properly calculate name length
+          target_node.attr.name = "." .. current_node[1]
+          add_new_definition(documents, target_node, locs)
+        end
       elseif current_node.is_Id and current_node.attr.node and not current_node.attr.builtin then
         local target_node = current_node.attr.node
         add_new_definition(documents, target_node, locs)
@@ -200,12 +202,15 @@ return function(
       elseif current_node.is_DotIndex then
         local target_node = current_node[2].attr.node
         add_new_definition(documents, target_node, locs)
-      elseif current_node.attr.builtin then
-        -- TODO: figure out if theres a way to go to definiton on builtin funcs
       end
     else
       logger.log(err)
     end
   end
-  response.definition(request_id, locs)
+
+  if locs then
+    server.send_response(request_id, locs)
+  else
+    server.send_error(request_id, server.LspErrorCode.RequestFailed, "Failed to find definition")
+  end
 end
