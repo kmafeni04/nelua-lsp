@@ -1,4 +1,4 @@
-local interp = require("lib.interp")
+local interp = require("libs.interp")
 local logger = {}
 
 if arg[1] == "DEBUG" then

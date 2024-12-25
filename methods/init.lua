@@ -1,18 +1,17 @@
 local logger = require("utils.logger")
-local response = require("utils.response")
 local server = require("utils.server")
 
-local did_change = require("method.did_change")
-local diagnostic = require("method.diagnostic")
-local completion = require("method.completion")
-local hover = require("method.hover")
-local definition = require("method.definition")
-local rename = require("method.rename")
+local did_change = require("methods.did_change")
+local diagnostic = require("methods.diagnostic")
+local completion = require("methods.completion")
+local hover = require("methods.hover")
+local definition = require("methods.definition")
+local rename = require("methods.rename")
 
-local method = {}
+local methods = {}
 
 ---@param request_id integer
-function method.initialize(request_id)
+function methods.initialize(request_id)
   local intilaize_result = {
     capabilities = {
       textDocumentSync = 2,
@@ -22,7 +21,9 @@ function method.initialize(request_id)
       definitionProvider = true,
     },
   }
-  server.send_response(request_id, intilaize_result)
+  if not server.send_response(request_id, intilaize_result) then
+    server.send_error(request_id, server.LspErrorCode.ServerNotInitialized, "Failed to initialize server")
+  end
 end
 
 ---@param current_file_path string
@@ -40,15 +41,17 @@ end
 ---@param current_file_path string
 ---@param current_uri string
 ---@return table? ast
-function method.diagnostic(current_file_content, current_file_path, current_uri)
+function methods.diagnostic(current_file_content, current_file_path, current_uri)
   return diagnostic(current_file_content, current_file_path, current_uri)
+  --
 end
 
 ---@param current_file_content string
 ---@param request_params table
 ---@return string
-function method.did_change(current_file_content, request_params)
+function methods.did_change(current_file_content, request_params)
   return did_change(current_file_content, request_params)
+  --
 end
 
 ---@param request_id integer
@@ -58,7 +61,7 @@ end
 ---@param current_uri string
 ---@param current_file_content string
 ---@param ast_cache table<string, table>
-function method.completion(
+function methods.completion(
   request_id,
   request_params,
   documents,
@@ -76,6 +79,7 @@ function method.completion(
     current_file_content,
     ast_cache
   )
+  --
 end
 
 ---@param request_id integer
@@ -84,8 +88,9 @@ end
 ---@param current_line integer
 ---@param current_char integer
 ---@param ast? table
-function method.hover(request_id, current_file_content, current_file_path, current_line, current_char, ast)
+function methods.hover(request_id, current_file_content, current_file_path, current_line, current_char, ast)
   hover(request_id, current_file_content, current_file_path, current_line, current_char, ast)
+  --
 end
 
 ---@param request_id integer
@@ -96,7 +101,7 @@ end
 ---@param current_line integer
 ---@param current_char integer
 ---@param ast? table
-function method.definition(
+function methods.definition(
   request_id,
   root_path,
   documents,
@@ -107,19 +112,21 @@ function method.definition(
   ast
 )
   definition(request_id, root_path, documents, current_file_content, current_file_path, current_line, current_char, ast)
+  --
 end
 
 ---@param request_id integer
 ---@param request_params table
 ---@param current_file_content string,
 ---@param ast table
-function method.rename(request_id, request_params, current_file_content, ast)
+function methods.rename(request_id, request_params, current_file_content, ast)
   rename(request_id, request_params, current_file_content, ast)
+  --
 end
 
-function method.shutdown()
+function methods.shutdown()
   logger.log("LSP Server has been shutdown")
-  response.shutdown()
+  server.send_response(nil, {})
 end
 
-return method
+return methods

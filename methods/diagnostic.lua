@@ -4,7 +4,7 @@ local sstream = require("nelua.utils.sstream")
 
 local analyze_ast = require("utils.analyze_ast")
 local logger = require("utils.logger")
-local notification = require("utils.notification")
+local server = require("utils.server")
 local pos_to_line_and_char = require("utils.pos_to_line_char")
 
 ---@enum Severity
@@ -149,7 +149,10 @@ return function(current_file_content, current_file_path, current_uri)
         severity = diag.severity,
       }
       table.insert(diagnostics, diagnostic)
-      notification.diagnostic(diag.uri, diagnostics, false)
+      server.send_notification("textDocument/publishDiagnostics", {
+        uri = current_uri,
+        diagnostics = diagnostics,
+      })
       return nil
     elseif err.message:match(":%s*syntax error:") then
       local diag = create_diagnostic_fields(
@@ -167,7 +170,10 @@ return function(current_file_content, current_file_path, current_uri)
         severity = diag.severity,
       }
       table.insert(diagnostics, diagnostic)
-      notification.diagnostic(diag.uri, diagnostics, false)
+      server.send_notification("textDocument/publishDiagnostics", {
+        uri = current_uri,
+        diagnostics = diagnostics,
+      })
       return nil
     else
       local diagnostic = {
@@ -179,11 +185,13 @@ return function(current_file_content, current_file_path, current_uri)
         severity = Severity.Error,
       }
       table.insert(diagnostics, diagnostic)
-      notification.diagnostic(current_uri, diagnostics, false)
+      server.send_notification("textDocument/publishDiagnostics", {
+        uri = current_uri,
+        diagnostics = diagnostics,
+      })
       return nil
     end
   else
-    local unused = false
     local nodes = {}
     local mark = {}
     for _, node in
@@ -201,7 +209,6 @@ return function(current_file_content, current_file_path, current_uri)
         and not node.is_FuncDef
       then
         local pos = node.pos
-        unused = true
         local s_line, s_char = pos_to_line_and_char(pos, current_file_content)
         local ss = sstream()
         local msg = ""
@@ -230,10 +237,10 @@ return function(current_file_content, current_file_path, current_uri)
         table.insert(diagnostics, diagnostic)
       end
     end
-    notification.diagnostic(current_uri, diagnostics, false)
-    if not unused then
-      notification.diagnostic(current_uri, diagnostics, true)
-    end
+    server.send_notification("textDocument/publishDiagnostics", {
+      uri = current_uri,
+      diagnostics = diagnostics,
+    })
     return ast
   end
 end

@@ -1,10 +1,10 @@
 -- TODO: If workspace folder is provided, use that instead of the git root path
--- TODO: Figure out what's is causing the lsp to be so slow
+-- TODO: Figure out what is causing the lsp to be so slow on larger files
 
 local rpc = require("utils.rpc")
-local switch = require("lib.switch")
+local switch = require("libs.switch")
 local server = require("utils.server")
-local method = require("method")
+local methods = require("methods")
 local logger = require("utils.logger")
 
 logger.init()
@@ -36,7 +36,7 @@ while true do
     logger.log("Method: " .. request.method)
     switch(request.method, {
       ["initialize"] = function()
-        method.initialize(request.id)
+        methods.initialize(request.id)
       end,
       ["textDocument/didOpen"] = function()
         local root_path_not_found =
@@ -49,16 +49,16 @@ while true do
         current_file_content = request.params.textDocument.text
         documents[current_uri] = current_file_content
 
-        local ast = method.diagnostic(current_file_content, current_file_path, current_uri)
+        local ast = methods.diagnostic(current_file_content, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
       end,
       ["textDocument/didChange"] = function()
-        current_file_content = method.did_change(current_file_content, request.params)
+        current_file_content = methods.did_change(current_file_content, request.params)
         documents[current_uri] = current_file_content
 
-        local ast = method.diagnostic(current_file_content, current_file_path, current_uri)
+        local ast = methods.diagnostic(current_file_content, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -68,13 +68,13 @@ while true do
         if current_file_prog then
           current_file_content = current_file_prog:read("a")
         end
-        local ast = method.diagnostic(current_file_content, current_file_path, current_uri)
+        local ast = methods.diagnostic(current_file_content, current_file_path, current_uri)
         if ast then
           ast_cache[current_uri] = ast
         end
       end,
       ["textDocument/completion"] = function()
-        local ast = method.completion(
+        local ast = methods.completion(
           request.id,
           request.params,
           documents,
@@ -94,7 +94,7 @@ while true do
         current_file_content = documents[current_uri]
         local ast = ast_cache[current_uri]
 
-        method.hover(request.id, current_file_content, current_file_path, current_line, current_char, ast)
+        methods.hover(request.id, current_file_content, current_file_path, current_line, current_char, ast)
       end,
       ["textDocument/definition"] = function()
         local current_line = request.params.position.line
@@ -102,7 +102,7 @@ while true do
         current_file_content = documents[current_uri]
         local ast = ast_cache[current_uri]
 
-        method.definition(
+        methods.definition(
           request.id,
           root_path,
           documents,
@@ -114,14 +114,14 @@ while true do
         )
       end,
       ["textDocument/rename"] = function()
-        method.rename(request.id, request.params, current_file_content, ast_cache[current_uri])
+        methods.rename(request.id, request.params, current_file_content, ast_cache[current_uri])
       end,
       ["textDocument/didClose"] = function()
         documents[current_uri] = nil
         ast_cache[current_uri] = nil
       end,
       ["shutdown"] = function()
-        method.shutdown()
+        methods.shutdown()
       end,
       ["exit"] = function()
         os.exit()

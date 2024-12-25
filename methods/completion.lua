@@ -1,8 +1,7 @@
--- TODO: Check how methods for generics like `sequence` work as pressing `:` shows no methods
-local switch = require("lib.switch")
-local get_comments = require("lib.nldoc").get_comments
+local switch = require("libs.switch")
+local get_comments = require("libs.nldoc").get_comments
 
-local response = require("utils.response")
+local server = require("utils.server")
 local logger = require("utils.logger")
 local analyze_ast = require("utils.analyze_ast")
 local find_nodes = require("utils.find_nodes")
@@ -893,6 +892,10 @@ return function(request_id, request_params, documents, current_uri, current_file
     items = get_prefixed_completions(text_items, get_current_prefix())
   end
 
-  response.completion(request_id, items)
+  if next(items) then
+    server.send_response(request_id, items)
+  else
+    server.send_error(request_id, server.LspErrorCode.RequestFailed, "Failed to provide any completions")
+  end
   return ast
 end

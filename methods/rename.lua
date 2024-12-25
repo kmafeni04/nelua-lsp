@@ -1,6 +1,6 @@
-local switch = require("lib.switch")
+local switch = require("libs.switch")
 
-local response = require("utils.response")
+local server = require("utils.server")
 local logger = require("utils.logger")
 local find_nodes = require("utils.find_nodes")
 local pos_to_line_and_char = require("utils.pos_to_line_char")
@@ -296,5 +296,9 @@ return function(request_id, request_params, current_file_content, ast)
   else
     logger.log(err)
   end
-  return response.rename(request_id, changes)
+
+  local result = {
+    changes = changes,
+  }
+  server.send_response(request_id, result)
 end
