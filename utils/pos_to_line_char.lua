@@ -2,7 +2,7 @@
 ---@param current_file_content string
 ---@return integer line
 ---@return integer char
-local function pos_to_line_and_char(pos, current_file_content)
+local function pos_to_line_char(pos, current_file_content)
   local s_line = 0
   local pos_at_line = 0
   local text = current_file_content:sub(1, pos)
@@ -14,4 +14,4 @@ local function pos_to_line_and_char(pos, current_file_content)
   return s_line, s_char
 end
 
-return pos_to_line_and_char
+return pos_to_line_char

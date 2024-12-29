@@ -5,7 +5,7 @@ local sstream = require("nelua.utils.sstream")
 local analyze_ast = require("utils.analyze_ast")
 local logger = require("utils.logger")
 local server = require("utils.server")
-local pos_to_line_and_char = require("utils.pos_to_line_char")
+local pos_to_line_char = require("utils.pos_to_line_char")
 
 ---@enum Severity
 local Severity = {
@@ -209,7 +209,7 @@ return function(current_file_content, current_file_path, current_uri)
         and not node.is_FuncDef
       then
         local pos = node.pos
-        local s_line, s_char = pos_to_line_and_char(pos, current_file_content)
+        local s_line, s_char = pos_to_line_char(pos, current_file_content)
         local ss = sstream()
         local msg = ""
         ss:add("Unused")

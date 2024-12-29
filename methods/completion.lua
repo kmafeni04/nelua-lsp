@@ -6,7 +6,7 @@ local logger = require("utils.logger")
 local analyze_ast = require("utils.analyze_ast")
 local find_nodes = require("utils.find_nodes")
 local find_pos = require("utils.find_pos")
-local pos_to_line_and_char = require("utils.pos_to_line_char")
+local pos_to_line_char = require("utils.pos_to_line_char")
 
 local keywords = {
   ["local"] = true,
@@ -670,7 +670,7 @@ return function(request_id, request_params, documents, current_uri, current_file
   local ast, err = analyze_ast(content, current_file_path)
 
   local pos = #before
-  local line, char = pos_to_line_and_char(_pos, content)
+  local line, char = pos_to_line_char(_pos, content)
   if ast then
     ast_cache[current_uri] = ast
   else

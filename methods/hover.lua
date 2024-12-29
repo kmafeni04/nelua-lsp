@@ -5,7 +5,7 @@ local get_comments = require("libs.nldoc").get_comments
 
 local find_nodes = require("utils.find_nodes")
 local logger = require("utils.logger")
-local pos_to_line_and_char = require("utils.pos_to_line_char")
+local pos_to_line_char = require("utils.pos_to_line_char")
 local server = require("utils.server")
 
 ---@param request_id integer
@@ -21,7 +21,7 @@ return function(request_id, current_file_content, current_file_path, current_lin
   ---@param file_path string
   ---@param pos integer
   local function add_doc(file, file_path, pos)
-    local line = pos_to_line_and_char(pos, file)
+    local line = pos_to_line_char(pos, file)
     local comments = get_comments(file, file_path)
     for _, comment in pairs(comments) do
       if type(comment) == "table" then
