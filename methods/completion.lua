@@ -611,6 +611,7 @@ end
 ---@param current_file_content string
 ---@param ast_cache table<string, table>
 ---@return table? ast
+---@return table items
 return function(request_id, request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
   local current_line = request_params.position.line
   local current_char = request_params.position.character
@@ -642,7 +643,7 @@ return function(request_id, request_params, documents, current_uri, current_file
     local text_items = gen_text_completions(documents)
     local items = get_prefixed_completions(text_items, get_current_prefix())
     server.send_response(request_id, items)
-    return ast_cache[current_uri]
+    return ast_cache[current_uri], items
   end
 
   local symbols = {}
@@ -897,5 +898,5 @@ return function(request_id, request_params, documents, current_uri, current_file
   else
     server.send_error(request_id, server.LspErrorCode.RequestFailed, "Failed to provide any completions")
   end
-  return ast
+  return ast, items
 end

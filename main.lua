@@ -33,7 +33,7 @@ while true do
       current_uri = request.params.textDocument.uri
       current_file_path = current_uri:sub(#"file://" + 1)
     end
-    logger.log("Method: " .. request.method)
+    logger.log("Method: " .. request.method .. " ID: " .. (request.id or "N/A"))
     switch(request.method, {
       ["initialize"] = function()
         methods.initialize(request.id)

@@ -20,7 +20,13 @@ This is an early implementation of writing an LSP server the for [nelua](https:/
 
 ## How to Run
 ```sh
-  nelua -L /path/to/nelua-lsp --script /path/to/nelua-lsp/main.lua
+nelua -L /path/to/nelua-lsp --script /path/to/nelua-lsp/main.lua
 ```
 
-Read [EDITORS.md](EDITORS.md) to see how to use it in your code editor.
+Read [EDITORS.md](EDITORS.md) for specific instructions on how to use it in your code editor.
+
+## How to run test
+```sh
+nelua -L /path/to/nelua-lsp --script /path/to/nelua-lsp/test.lua
+```
+
