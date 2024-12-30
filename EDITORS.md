@@ -21,7 +21,7 @@ args = ["-L", "path/to/nelua-lsp", "--script", "path/to/nelua-lsp/main.lua"]
 
 ## VS code
 
-Using the [vscode-lspconfig](https://marketplace.visualstudio.com/items?itemName=whtsht.vscode-lspconfig), add this to your settings.json
+Using the [vscode-lspconfig](https://marketplace.visualstudio.com/items?itemName=whtsht.vscode-lspconfig), add this to your `settings.json`
 
 ```json
 "vscode-lspconfig.serverConfigurations": [
@@ -41,4 +41,25 @@ Using the [vscode-lspconfig](https://marketplace.visualstudio.com/items?itemName
       ]
     }
   ]
+```
+
+## Lite-XL
+
+Using the [lite-xl-lsp](https://github.com/lite-xl/lite-xl-lsp) plugin, add this to your `init.lua` file
+
+```lua
+local lsp = require "plugins.lsp"
+
+lsp.add_server({
+  name = "nelua_lsp",
+  language = "nelua",
+  file_patterns = { "%.nelua$" },
+  command = {
+    "nelua",
+    "-L",
+    "/path/to/nelua-lsp",
+    "--script",
+    "/path/to/nelua-lsp/main.lua"
+  }
+})
 ```
