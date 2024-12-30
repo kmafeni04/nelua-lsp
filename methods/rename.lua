@@ -44,11 +44,10 @@ local function find_nodes_in_scope_node(node, pos, found_nodes)
   return found_nodes, nil
 end
 
----@param request_id integer
 ---@param request_params table
 ---@param current_file_content string,
 ---@param ast table
-return function(request_id, request_params, current_file_content, ast)
+return function(request_params, current_file_content, ast)
   local changes = {
     [request_params.textDocument.uri] = {},
   }

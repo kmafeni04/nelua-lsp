@@ -53,43 +53,24 @@ function methods.did_change(current_file_content, request_params)
   return did_change(current_file_content, request_params)
 end
 
----@param request_id integer
 ---@param request_params table
 ---@param documents table<string, string>
 ---@param current_file_path string
 ---@param current_uri string
 ---@param current_file_content string
 ---@param ast_cache table<string, table>
-function methods.completion(
-  request_id,
-  request_params,
-  documents,
-  current_uri,
-  current_file_path,
-  current_file_content,
-  ast_cache
-)
-  return completion(
-    request_id,
-    request_params,
-    documents,
-    current_uri,
-    current_file_path,
-    current_file_content,
-    ast_cache
-  )
+function methods.completion(request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
+  return completion(request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
 end
 
+---@param request_params table
 ---@param current_file_content string
 ---@param current_file_path string
----@param current_line integer
----@param current_char integer
 ---@param ast table
-function methods.hover(current_file_content, current_file_path, current_line, current_char, ast)
-  return hover(current_file_content, current_file_path, current_line, current_char, ast)
+function methods.hover(request_params, current_file_content, current_file_path, ast)
+  return hover(request_params, current_file_content, current_file_path, ast)
 end
 
----@param request_id integer
 ---@param root_path string
 ---@param documents table<string, string>
 ---@param current_file_content string
@@ -98,7 +79,6 @@ end
 ---@param current_char integer
 ---@param ast? table
 function methods.definition(
-  request_id,
   root_path,
   documents,
   current_file_content,
@@ -107,24 +87,14 @@ function methods.definition(
   current_char,
   ast
 )
-  return definition(
-    request_id,
-    root_path,
-    documents,
-    current_file_content,
-    current_file_path,
-    current_line,
-    current_char,
-    ast
-  )
+  return definition(root_path, documents, current_file_content, current_file_path, current_line, current_char, ast)
 end
 
----@param request_id integer
 ---@param request_params table
 ---@param current_file_content string,
 ---@param ast table
-function methods.rename(request_id, request_params, current_file_content, ast)
-  return rename(request_id, request_params, current_file_content, ast)
+function methods.rename(request_params, current_file_content, ast)
+  return rename(request_params, current_file_content, ast)
 end
 
 function methods.shutdown()

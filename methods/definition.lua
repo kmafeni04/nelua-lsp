@@ -60,7 +60,6 @@ local function add_new_definition(documents, target_node, locs)
   table.insert(locs, loc)
 end
 
----@param request_id integer
 ---@param root_path string
 ---@param documents table<string, string>
 ---@param current_file_content string
@@ -68,16 +67,7 @@ end
 ---@param current_line integer
 ---@param current_char integer
 ---@param ast? table
-return function(
-  request_id,
-  root_path,
-  documents,
-  current_file_content,
-  current_file_path,
-  current_line,
-  current_char,
-  ast
-)
+return function(root_path, documents, current_file_content, current_file_path, current_line, current_char, ast)
   local locs = nil
   if ast then
     local found_nodes, err = find_nodes(current_file_content, current_line, current_char, ast)

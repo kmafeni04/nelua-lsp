@@ -14,7 +14,6 @@ describe("Completion tests", function()
       [current_uri] = current_file_content,
     }
     local line, char = pos_to_line_char(#current_file_content, current_file_content)
-    local request_id = 1
     local request_params = {
       position = {
         line = line,
@@ -24,7 +23,7 @@ describe("Completion tests", function()
     local ast_cache = {}
     ---@type table?, CompItem[]
     local _, items =
-      completion(request_id, request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
+      completion(request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
     --[[ 
         local comp_item = {
           label = label,
@@ -87,7 +86,7 @@ describe("Completion tests", function()
     }
     ---@type table?, CompItem[]
     local _, items =
-      completion(request_id, request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
+      completion(request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
     local expected_items = {
       { label = "test" },
       { label = "test2" },
@@ -139,7 +138,7 @@ describe("Completion tests", function()
     }
     ---@type table?, CompItem[]
     local _, items =
-      completion(request_id, request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
+      completion(request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
     local expected_items = {
       { label = "test" },
       { label = "test2" },

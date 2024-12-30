@@ -87,15 +87,8 @@ while true do
         end
       end,
       ["textDocument/completion"] = function()
-        local ast, items = methods.completion(
-          request.id,
-          request.params,
-          documents,
-          current_uri,
-          current_file_path,
-          current_file_content,
-          ast_cache
-        )
+        local ast, items =
+          methods.completion(request.params, documents, current_uri, current_file_path, current_file_content, ast_cache)
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -108,12 +101,10 @@ while true do
       end,
       ["completionItem/resolve"] = function() end,
       ["textDocument/hover"] = function()
-        local current_line = request.params.position.line
-        local current_char = request.params.position.character
         current_file_content = documents[current_uri]
         local ast = ast_cache[current_uri]
 
-        local hover_content = methods.hover(current_file_content, current_file_path, current_line, current_char, ast)
+        local hover_content = methods.hover(request.params, current_file_content, current_file_path, ast)
         if hover_content then
           local result = {
             contents = hover_content,
@@ -130,7 +121,6 @@ while true do
         local ast = ast_cache[current_uri]
 
         local locs = methods.definition(
-          request.id,
           root_path,
           documents,
           current_file_content,
@@ -146,7 +136,7 @@ while true do
         end
       end,
       ["textDocument/rename"] = function()
-        local changes = methods.rename(request.id, request.params, current_file_content, ast_cache[current_uri])
+        local changes = methods.rename(request.params, current_file_content, ast_cache[current_uri])
         local result = {
           changes = changes,
         }

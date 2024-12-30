@@ -602,7 +602,6 @@ local function gen_text_completions(documents)
   return text_items
 end
 
----@param request_id integer
 ---@param request_params table
 ---@param documents table<string, string>
 ---@param current_uri string
@@ -611,7 +610,7 @@ end
 ---@param ast_cache table<string, table>
 ---@return table? ast
 ---@return table items
-return function(request_id, request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
+return function(request_params, documents, current_uri, current_file_path, current_file_content, ast_cache)
   local current_line = request_params.position.line
   local current_char = request_params.position.character
   local _pos = find_pos(current_file_content, current_line, current_char)

@@ -10,9 +10,15 @@ describe("Hover tests", function()
     local current_file_path = "/home/user/Desktop/test.nelua"
     local current_file_content = "local x = 1"
     local ast = analyze_ast(current_file_content, current_file_path)
-    local line, char = pos_to_line_char(7, current_file_content)
     assert(ast)
-    local result = hover(current_file_content, current_file_path, line, char, ast)
+    local line, char = pos_to_line_char(7, current_file_content)
+    local request_params = {
+      position = {
+        line = line,
+        character = char,
+      },
+    }
+    local result = hover(request_params, current_file_content, current_file_path, ast)
     local expected_result = "x\n```nelua\nType: int64\n```"
     expect.truthy(result == expected_result)
   end)
@@ -20,9 +26,15 @@ describe("Hover tests", function()
     local current_file_path = "/home/user/Desktop/test.nelua"
     local current_file_content = "-- test doc\nlocal x = 1"
     local ast = analyze_ast(current_file_content, current_file_path)
-    local line, char = pos_to_line_char(19, current_file_content)
     assert(ast)
-    local result = hover(current_file_content, current_file_path, line, char, ast)
+    local line, char = pos_to_line_char(19, current_file_content)
+    local request_params = {
+      position = {
+        line = line,
+        character = char,
+      },
+    }
+    local result = hover(request_params, current_file_content, current_file_path, ast)
     local expected_result = "x\n```nelua\nType: int64\n```\n\n`---`\n\ntest doc\n"
     expect.truthy(result == expected_result)
   end)
