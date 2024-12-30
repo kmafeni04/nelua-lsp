@@ -41,9 +41,9 @@ end
 ---@param current_file_path string
 ---@param current_uri string
 ---@return table? ast
+---@return Diagnsotic[]
 function methods.diagnostic(current_file_content, current_file_path, current_uri)
   return diagnostic(current_file_content, current_file_path, current_uri)
-  --
 end
 
 ---@param current_file_content string
@@ -51,7 +51,6 @@ end
 ---@return string
 function methods.did_change(current_file_content, request_params)
   return did_change(current_file_content, request_params)
-  --
 end
 
 ---@param request_id integer
@@ -79,7 +78,6 @@ function methods.completion(
     current_file_content,
     ast_cache
   )
-  --
 end
 
 ---@param request_id integer
@@ -89,8 +87,7 @@ end
 ---@param current_char integer
 ---@param ast? table
 function methods.hover(request_id, current_file_content, current_file_path, current_line, current_char, ast)
-  hover(request_id, current_file_content, current_file_path, current_line, current_char, ast)
-  --
+  return hover(request_id, current_file_content, current_file_path, current_line, current_char, ast)
 end
 
 ---@param request_id integer
@@ -111,8 +108,16 @@ function methods.definition(
   current_char,
   ast
 )
-  definition(request_id, root_path, documents, current_file_content, current_file_path, current_line, current_char, ast)
-  --
+  return definition(
+    request_id,
+    root_path,
+    documents,
+    current_file_content,
+    current_file_path,
+    current_line,
+    current_char,
+    ast
+  )
 end
 
 ---@param request_id integer
@@ -120,8 +125,7 @@ end
 ---@param current_file_content string,
 ---@param ast table
 function methods.rename(request_id, request_params, current_file_content, ast)
-  rename(request_id, request_params, current_file_content, ast)
-  --
+  return rename(request_id, request_params, current_file_content, ast)
 end
 
 function methods.shutdown()

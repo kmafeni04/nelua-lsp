@@ -128,6 +128,7 @@ end
 ---@param current_file_path string
 ---@param current_uri string
 ---@return table? ast
+---@return Diagnsotic[]
 return function(current_file_content, current_file_path, current_uri)
   current_file_content = current_file_content
   local diagnostics = {}
@@ -149,11 +150,7 @@ return function(current_file_content, current_file_path, current_uri)
         severity = diag.severity,
       }
       table.insert(diagnostics, diagnostic)
-      server.send_notification("textDocument/publishDiagnostics", {
-        uri = current_uri,
-        diagnostics = diagnostics,
-      })
-      return nil
+      return nil, diagnostics
     elseif err.message:match(":%s*syntax error:") then
       local diag = create_diagnostic_fields(
         err.message,
@@ -170,11 +167,7 @@ return function(current_file_content, current_file_path, current_uri)
         severity = diag.severity,
       }
       table.insert(diagnostics, diagnostic)
-      server.send_notification("textDocument/publishDiagnostics", {
-        uri = current_uri,
-        diagnostics = diagnostics,
-      })
-      return nil
+      return nil, diagnostics
     else
       local diagnostic = {
         range = {
@@ -185,11 +178,7 @@ return function(current_file_content, current_file_path, current_uri)
         severity = Severity.Error,
       }
       table.insert(diagnostics, diagnostic)
-      server.send_notification("textDocument/publishDiagnostics", {
-        uri = current_uri,
-        diagnostics = diagnostics,
-      })
-      return nil
+      return nil, diagnostics
     end
   else
     local nodes = {}
@@ -237,10 +226,6 @@ return function(current_file_content, current_file_path, current_uri)
         table.insert(diagnostics, diagnostic)
       end
     end
-    server.send_notification("textDocument/publishDiagnostics", {
-      uri = current_uri,
-      diagnostics = diagnostics,
-    })
-    return ast
+    return ast, diagnostics
   end
 end

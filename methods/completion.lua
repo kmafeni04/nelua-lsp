@@ -1,7 +1,6 @@
 local switch = require("libs.switch")
 local get_comments = require("libs.nldoc").get_comments
 
-local server = require("utils.server")
 local logger = require("utils.logger")
 local analyze_ast = require("utils.analyze_ast")
 local find_nodes = require("utils.find_nodes")
@@ -642,7 +641,6 @@ return function(request_id, request_params, documents, current_uri, current_file
   if in_comment then
     local text_items = gen_text_completions(documents)
     local items = get_prefixed_completions(text_items, get_current_prefix())
-    server.send_response(request_id, items)
     return ast_cache[current_uri], items
   end
 
@@ -891,12 +889,6 @@ return function(request_id, request_params, documents, current_uri, current_file
   if not next(items) then
     local text_items = gen_text_completions(documents)
     items = get_prefixed_completions(text_items, get_current_prefix())
-  end
-
-  if next(items) then
-    server.send_response(request_id, items)
-  else
-    server.send_error(request_id, server.LspErrorCode.RequestFailed, "Failed to provide any completions")
   end
   return ast, items
 end

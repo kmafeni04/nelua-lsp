@@ -174,12 +174,5 @@ return function(request_id, current_file_content, current_file_path, current_lin
     end
   end
 
-  if content then
-    local result = {
-      contents = content,
-    }
-    server.send_response(request_id, result)
-  else
-    server.send_error(request_id, server.LspErrorCode.RequestFailed, "Failed to provide any hover information")
-  end
+  return content
 end

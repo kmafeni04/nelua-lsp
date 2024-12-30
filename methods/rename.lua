@@ -297,8 +297,5 @@ return function(request_id, request_params, current_file_content, ast)
     logger.log(err)
   end
 
-  local result = {
-    changes = changes,
-  }
-  server.send_response(request_id, result)
+  return changes
 end

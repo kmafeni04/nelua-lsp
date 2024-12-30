@@ -208,9 +208,5 @@ return function(
     end
   end
 
-  if locs then
-    server.send_response(request_id, locs)
-  else
-    server.send_error(request_id, server.LspErrorCode.RequestFailed, "Failed to find definition")
-  end
+  return locs
 end

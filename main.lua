@@ -49,7 +49,11 @@ while true do
         current_file_content = request.params.textDocument.text
         documents[current_uri] = current_file_content
 
-        local ast = methods.diagnostic(current_file_content, current_file_path, current_uri)
+        local ast, diagnostics = methods.diagnostic(current_file_content, current_file_path, current_uri)
+        server.send_notification("textDocument/publishDiagnostics", {
+          uri = current_uri,
+          diagnostics = diagnostics,
+        })
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -58,7 +62,11 @@ while true do
         current_file_content = methods.did_change(current_file_content, request.params)
         documents[current_uri] = current_file_content
 
-        local ast = methods.diagnostic(current_file_content, current_file_path, current_uri)
+        local ast, diagnostics = methods.diagnostic(current_file_content, current_file_path, current_uri)
+        server.send_notification("textDocument/publishDiagnostics", {
+          uri = current_uri,
+          diagnostics = diagnostics,
+        })
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -69,13 +77,17 @@ while true do
           current_file_content = current_file_prog:read("a")
           documents[current_uri] = current_file_content
         end
-        local ast = methods.diagnostic(current_file_content, current_file_path, current_uri)
+        local ast, diagnostics = methods.diagnostic(current_file_content, current_file_path, current_uri)
+        server.send_notification("textDocument/publishDiagnostics", {
+          uri = current_uri,
+          diagnostics = diagnostics,
+        })
         if ast then
           ast_cache[current_uri] = ast
         end
       end,
       ["textDocument/completion"] = function()
-        local ast = methods.completion(
+        local ast, items = methods.completion(
           request.id,
           request.params,
           documents,
@@ -87,6 +99,12 @@ while true do
         if ast then
           ast_cache[current_uri] = ast
         end
+
+        if next(items) then
+          server.send_response(request.id, items)
+        else
+          server.send_error(request.id, server.LspErrorCode.RequestFailed, "Failed to provide any completions")
+        end
       end,
       ["completionItem/resolve"] = function() end,
       ["textDocument/hover"] = function()
@@ -95,7 +113,16 @@ while true do
         current_file_content = documents[current_uri]
         local ast = ast_cache[current_uri]
 
-        methods.hover(request.id, current_file_content, current_file_path, current_line, current_char, ast)
+        local hover_content =
+          methods.hover(request.id, current_file_content, current_file_path, current_line, current_char, ast)
+        if hover_content then
+          local result = {
+            contents = hover_content,
+          }
+          server.send_response(request.id, result)
+        else
+          server.send_error(request.id, server.LspErrorCode.RequestFailed, "Failed to provide any hover information")
+        end
       end,
       ["textDocument/definition"] = function()
         local current_line = request.params.position.line
@@ -103,7 +130,7 @@ while true do
         current_file_content = documents[current_uri]
         local ast = ast_cache[current_uri]
 
-        methods.definition(
+        local locs = methods.definition(
           request.id,
           root_path,
           documents,
@@ -113,9 +140,18 @@ while true do
           current_char,
           ast
         )
+        if locs then
+          server.send_response(request.id, locs)
+        else
+          server.send_error(request.id, server.LspErrorCode.RequestFailed, "Failed to find definition")
+        end
       end,
       ["textDocument/rename"] = function()
-        methods.rename(request.id, request.params, current_file_content, ast_cache[current_uri])
+        local changes = methods.rename(request.id, request.params, current_file_content, ast_cache[current_uri])
+        local result = {
+          changes = changes,
+        }
+        server.send_response(request.id, result)
       end,
       ["textDocument/didClose"] = function()
         documents[current_uri] = nil
