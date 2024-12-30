@@ -8,13 +8,13 @@ local logger = require("utils.logger")
 local pos_to_line_char = require("utils.pos_to_line_char")
 local server = require("utils.server")
 
----@param request_id integer
 ---@param current_file_content string
 ---@param current_file_path string
 ---@param current_line integer
 ---@param current_char integer
----@param ast table?
-return function(request_id, current_file_content, current_file_path, current_line, current_char, ast)
+---@param ast table
+---@return string? content
+return function(current_file_content, current_file_path, current_line, current_char, ast)
   local ss = sstream()
 
   ---@param file string

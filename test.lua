@@ -43,11 +43,12 @@ end
 
 local failed_tests = run_tests(current_dir, {})
 
+print()
 if next(failed_tests) then
   for _, failed_test in ipairs(failed_tests) do
-    io.stderr:write(("[%s] Test `%s` failed\n"):format(ansicolors.new("ERROR"):Red():tostring(), failed_test))
+    io.stderr:write(("%s Test `%s` failed\n"):format(ansicolors.new("[ERROR]"):Red():tostring(), failed_test))
   end
   os.exit(1)
 end
 
-print(("[%s] All tests passed"):format(ansicolors.new("SUCCESS"):Green():tostring()))
+print(("%s All tests passed"):format(ansicolors.new("[SUCCESS]"):Green():tostring()))

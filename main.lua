@@ -113,8 +113,7 @@ while true do
         current_file_content = documents[current_uri]
         local ast = ast_cache[current_uri]
 
-        local hover_content =
-          methods.hover(request.id, current_file_content, current_file_path, current_line, current_char, ast)
+        local hover_content = methods.hover(current_file_content, current_file_path, current_line, current_char, ast)
         if hover_content then
           local result = {
             contents = hover_content,

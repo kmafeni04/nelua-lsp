@@ -1,6 +1,6 @@
 local lester = require("libs.lester")
 local describe, it, expect = lester.describe, lester.it, lester.expect
-local completion = require("methods").completion
+local completion = require("methods.completion")
 
 local pos_to_line_char = require("utils.pos_to_line_char")
 local analyze_ast = require("utils.analyze_ast")

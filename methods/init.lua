@@ -80,14 +80,13 @@ function methods.completion(
   )
 end
 
----@param request_id integer
 ---@param current_file_content string
 ---@param current_file_path string
 ---@param current_line integer
 ---@param current_char integer
----@param ast? table
-function methods.hover(request_id, current_file_content, current_file_path, current_line, current_char, ast)
-  return hover(request_id, current_file_content, current_file_path, current_line, current_char, ast)
+---@param ast table
+function methods.hover(current_file_content, current_file_path, current_line, current_char, ast)
+  return hover(current_file_content, current_file_path, current_line, current_char, ast)
 end
 
 ---@param request_id integer
