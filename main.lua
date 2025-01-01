@@ -7,6 +7,13 @@ local server = require("utils.server")
 local methods = require("methods")
 local logger = require("utils.logger")
 
+local function send_diagnostics(current_uri, diagnostics)
+  server.send_notification("textDocument/publishDiagnostics", {
+    uri = current_uri,
+    diagnostics = diagnostics,
+  })
+end
+
 logger.init()
 
 ---@type table<string, string>
@@ -50,10 +57,7 @@ while true do
         documents[current_uri] = current_file_content
 
         local ast, diagnostics = methods.diagnostic(current_file_content, current_file_path, current_uri)
-        server.send_notification("textDocument/publishDiagnostics", {
-          uri = current_uri,
-          diagnostics = diagnostics,
-        })
+        send_diagnostics(current_uri, diagnostics)
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -63,10 +67,7 @@ while true do
         documents[current_uri] = current_file_content
 
         local ast, diagnostics = methods.diagnostic(current_file_content, current_file_path, current_uri)
-        server.send_notification("textDocument/publishDiagnostics", {
-          uri = current_uri,
-          diagnostics = diagnostics,
-        })
+        send_diagnostics(current_uri, diagnostics)
         if ast then
           ast_cache[current_uri] = ast
         end
@@ -78,10 +79,7 @@ while true do
           documents[current_uri] = current_file_content
         end
         local ast, diagnostics = methods.diagnostic(current_file_content, current_file_path, current_uri)
-        server.send_notification("textDocument/publishDiagnostics", {
-          uri = current_uri,
-          diagnostics = diagnostics,
-        })
+        send_diagnostics(current_uri, diagnostics)
         if ast then
           ast_cache[current_uri] = ast
         end
