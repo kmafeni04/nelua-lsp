@@ -24,7 +24,6 @@ local function run_tests(dir, failed_tests)
   for file in lfs.dir(dir) do
     if file ~= "." and file ~= ".." then
       local f = dir .. "/" .. file
-      print(f)
       local attr = lfs.attributes(f)
       if attr.mode == "directory" then
         lfs.chdir(f)
