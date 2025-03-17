@@ -36,7 +36,9 @@ local function traverse_nodes_and_mark(node, foundnodes, mark)
         if type(child) == "table" and child.is_Id and child.attr.type and child.attr.type.is_type then
           for _, _node in pairs(foundnodes) do
             if
-              (_node.is_DotIndex or _node.is_ColonIndex) and tostring(child.attr.type) == tostring(_node[2].attr.type)
+              (_node.is_DotIndex or _node.is_ColonIndex)
+              and _node.attr.name
+              and tostring(child.attr.type) == tostring(_node[2].attr.type)
             then
               mark[_node.attr.name .. "//" .. tostring(_node.attr.type)] = true
             end
@@ -181,51 +183,6 @@ return function(current_file_content, current_file_path, current_uri)
       return nil, diagnostics
     end
   else
-    local nodes = {}
-    local mark = {}
-    for _, node in
-      pairs(ast --[[@as table]])
-    do
-      traverse_nodes_and_mark(node, nodes, mark)
-    end
-
-    for _, node in pairs(nodes) do
-      if
-        node.attr
-        and node.attr.name
-        and node.pos
-        and not mark[node.attr.name .. "//" .. tostring(node.attr.type)]
-        and not node.is_FuncDef
-      then
-        local pos = node.pos
-        local s_line, s_char = pos_to_line_char(pos, current_file_content)
-        local ss = sstream()
-        local msg = ""
-        ss:add("Unused")
-        if node.is_IdDecl then
-          ss:addmany(" Variable `", node.attr.name, "`")
-        elseif node.is_Label then
-          ss:addmany(" Label `", node.attr.name, "`")
-          node.attr.name = "::" .. node.attr.name .. "::"
-        elseif (node.is_DotIndex and node.attr.ftype) or node.is_ColonIndex then
-          s_char = s_char + 1
-          ss:addmany(" Function `", node.attr.name, "`")
-          node.attr.name = node[1]
-        else
-          ss:addmany(" `", node.attr.name, "`")
-        end
-        msg = ss:tostring()
-        local diagnostic = {
-          range = {
-            start = { line = s_line, character = s_char },
-            ["end"] = { line = s_line, character = s_char + #node.attr.name },
-          },
-          message = msg,
-          severity = Severity.Hint,
-        }
-        table.insert(diagnostics, diagnostic)
-      end
-    end
     return ast, diagnostics
   end
 end

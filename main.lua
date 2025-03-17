@@ -6,6 +6,7 @@ local switch = require("libs.switch")
 local server = require("utils.server")
 local methods = require("methods")
 local logger = require("utils.logger")
+local profile = require("libs.profile")
 
 local function send_diagnostics(current_uri, diagnostics)
   server.send_notification("textDocument/publishDiagnostics", {
@@ -18,6 +19,7 @@ logger.init()
 
 ---@type table<string, string>
 local documents = {}
+
 ---@type table<string, table>
 local ast_cache = {}
 local current_uri = ""
@@ -26,6 +28,14 @@ local current_file_path = ""
 ---@type string
 local root_path = io.popen("git rev-parse --show-toplevel 2>&1"):read("l")
 
+-- TODO: Abstract later
+if arg[1] == "DEBUG" then
+  profile.start()
+  local profile_file, err = io.open("/tmp/nelua-lsp-profile.log", "w")
+  if not profile_file then
+    logger.log(err)
+  end
+end
 while true do
   ---@type string
   local header = io.read("L")
@@ -151,6 +161,18 @@ while true do
         os.exit()
       end,
     })
+    -- TODO: Abstract later
+    if arg[1] == "DEBUG" then
+      local profile_text = profile.report(20)
+      local profile_file, err = io.open("/tmp/nelua-lsp-profile.log", "a")
+      if profile_file then
+        profile_file:write(table.concat({ "\nMethod: ", request.method, "\n" }))
+        profile_file:write(profile_text)
+      else
+        logger.log(err)
+      end
+      profile.reset()
+    end
   else
     logger.log(err)
   end

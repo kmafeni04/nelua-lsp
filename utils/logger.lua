@@ -4,7 +4,7 @@ local logger = {}
 if arg[1] == "DEBUG" then
   --- Create a new log file
   function logger.init()
-    local log_file = io.open("/tmp/lsp.log", "w")
+    local log_file = io.open("/tmp/nelua-lsp.log", "w")
     local date = os.date("%Y/%m/%d", os.time())
     local time = os.date("%X", os.time())
     local logged_file = debug.getinfo(2).source
@@ -16,7 +16,7 @@ if arg[1] == "DEBUG" then
   --- Log new items separated by `", "`
   ---@param ... any
   function logger.log(...)
-    local log_file = io.open("/tmp/lsp.log", "a")
+    local log_file = io.open("/tmp/nelua-lsp.log", "a")
     local date = os.date("%Y/%m/%d", os.time())
     local time = os.date("%X", os.time())
     local logged_file = debug.getinfo(2).source
