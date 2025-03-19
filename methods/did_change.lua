@@ -7,6 +7,7 @@ return function(current_file_content, request_params)
   ---@type string[]
   local lines = {}
   for line in string.gmatch(current_file_content .. "\n", "([^\n]-)\n") do
+    logger.log(line)
     table.insert(lines, line)
   end
 
@@ -32,16 +33,17 @@ return function(current_file_content, request_params)
       for i = start_line, end_line do
         local current_line = i + offset
         if ci <= #change_lines then
-          if change_lines[ci] then
-            if current_line == start_line then
-              lines[current_line] = table.concat({ lines[current_line]:sub(1, start_char - 1), change_lines[ci] })
-            else
-              table.insert(lines, current_line, change_lines[ci])
-              offset = offset + 1
-            end
+          if current_line == start_line and lines[current_line] then
+            lines[current_line] = table.concat({ lines[current_line]:sub(1, start_char - 1), change_lines[ci] })
+          elseif lines[current_line] then
+            table.insert(lines, current_line, change_lines[ci])
+            offset = offset + 1
+          else
+            lines[current_line] = change_lines[ci]
+            offset = offset + 1
           end
-        elseif lines[current_line - 1] then
-          table.remove(lines, current_line - 1)
+        elseif lines[current_line] then
+          table.remove(lines, current_line)
           offset = offset - 1
         elseif ci == #lines then
           table.remove(lines, ci)
@@ -52,6 +54,7 @@ return function(current_file_content, request_params)
     end
   end
 
-  local new_file_content = table.concat(lines, "\n")
-  return new_file_content
+  current_file_content = table.concat(lines, "\n")
+  logger.log(current_file_content)
+  return current_file_content
 end

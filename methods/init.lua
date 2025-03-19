@@ -48,7 +48,6 @@ end
 
 ---@param current_file_content string
 ---@param request_params table
----@return string
 function methods.did_change(current_file_content, request_params)
   return did_change(current_file_content, request_params)
 end
