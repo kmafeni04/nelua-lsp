@@ -46,10 +46,11 @@ function methods.diagnostic(current_file_content, current_file_path, current_uri
   return diagnostic(current_file_content, current_file_path, current_uri)
 end
 
----@param current_file_content string
 ---@param request_params table
-function methods.did_change(current_file_content, request_params)
-  return did_change(current_file_content, request_params)
+---@param current_file_content string
+---@return string
+function methods.did_change(request_params, current_file_content)
+  return did_change(request_params, current_file_content)
 end
 
 ---@param request_params table

@@ -73,7 +73,7 @@ while true do
         end
       end,
       ["textDocument/didChange"] = function()
-        current_file_content = methods.did_change(current_file_content, request.params)
+        current_file_content = methods.did_change(request.params, current_file_content)
         documents[current_uri] = current_file_content
 
         local ast, diagnostics = methods.diagnostic(current_file_content, current_file_path, current_uri)

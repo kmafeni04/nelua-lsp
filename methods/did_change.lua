@@ -1,60 +1,75 @@
 local logger = require("utils.logger")
 
----@param current_file_content string
 ---@param request_params table
+---@param current_file_content string
 ---@return string
-return function(current_file_content, request_params)
-  ---@type string[]
-  local lines = {}
-  for line in string.gmatch(current_file_content .. "\n", "([^\n]-)\n") do
-    logger.log(line)
-    table.insert(lines, line)
+return function(request_params, current_file_content)
+  ---@param text string
+  local function split_lines(text)
+    local lines = {}
+    for line in string.gmatch(text .. "\n", "([^\n]-)\n") do
+      table.insert(lines, line)
+    end
+    return lines
   end
 
-  for _, change in ipairs(request_params.contentChanges) do
-    local start_line = change.range.start.line + 1
-    local start_char = change.range.start.character + 1
-    local end_line = change.range["end"].line + 1
-    local end_char = change.range["end"].character + 1
-    local text = change.text
+  ---@param lines table
+  ---@param change table
+  local function apply_change(lines, change)
+    local s_line = change.range.start.line + 1
+    local s_char = change.range.start.character + 1
+    local e_line = change.range["end"].line + 1
+    local e_char = change.range["end"].character + 1
 
-    if lines[start_line] and start_line == end_line then
-      lines[start_line] =
-        table.concat({ lines[start_line]:sub(1, start_char - 1), text, lines[start_line]:sub(end_char) })
+    -- Handle pure insertions
+    if s_line == e_line and s_char == e_char then
+      local line = lines[s_line] or ""
+      lines[s_line] = line:sub(1, s_char - 1) .. change.text .. line:sub(s_char)
+      return
+    end
+
+    if s_line > #lines + 1 then
+      return
+    end
+
+    while #lines < s_line do
+      table.insert(lines, "")
+    end
+
+    local new_lines = split_lines(change.text)
+    local head = lines[s_line] and lines[s_line]:sub(1, s_char - 1) or ""
+    local tail = lines[e_line] and lines[e_line]:sub(e_char + 1) or ""
+
+    local replacement = {}
+    if #new_lines == 1 then
+      table.insert(replacement, head .. new_lines[1] .. tail)
     else
-      ---@type string[]
-      local change_lines = {}
-      for change_line in string.gmatch(text .. "\n", "([^\n]-)\n") do
-        table.insert(change_lines, change_line)
+      table.insert(replacement, head .. new_lines[1])
+      for i = 2, #new_lines - 1 do
+        table.insert(replacement, new_lines[i])
       end
+      table.insert(replacement, new_lines[#new_lines] .. tail)
+    end
 
-      local ci = 1
-      local offset = 0
-      for i = start_line, end_line do
-        local current_line = i + offset
-        if ci <= #change_lines then
-          if current_line == start_line and lines[current_line] then
-            lines[current_line] = table.concat({ lines[current_line]:sub(1, start_char - 1), change_lines[ci] })
-          elseif lines[current_line] then
-            table.insert(lines, current_line, change_lines[ci])
-            offset = offset + 1
-          else
-            lines[current_line] = change_lines[ci]
-            offset = offset + 1
-          end
-        elseif lines[current_line] then
-          table.remove(lines, current_line)
-          offset = offset - 1
-        elseif ci == #lines then
-          table.remove(lines, ci)
-          offset = offset - 1
-        end
-        ci = ci + 1
-      end
+    for _ = s_line, math.min(e_line, #lines) do
+      table.remove(lines, s_line)
+    end
+
+    for i = #replacement, 1, -1 do
+      table.insert(lines, s_line, replacement[i])
     end
   end
 
-  current_file_content = table.concat(lines, "\n")
+  -- Split the file into lines
+  local lines = split_lines(current_file_content)
+
+  -- Apply each text change
+  for _, change in ipairs(request_params.contentChanges) do
+    apply_change(lines, change)
+  end
+
+  -- Rejoin the lines into final content
+  current_file_content = next(lines) and table.concat(lines, "\n") or current_file_content
   logger.log(current_file_content)
   return current_file_content
 end
