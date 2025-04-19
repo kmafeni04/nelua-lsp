@@ -147,7 +147,7 @@ describe("did_change tests", function()
         [1] = {
           range = {
             start = { line = 1, character = 10 },
-            ["end"] = { line = 1, character = 11 },
+            ["end"] = { line = 1, character = 12 },
           },
           text = "99",
         },
@@ -189,7 +189,7 @@ describe("did_change tests", function()
         [1] = {
           range = {
             start = { line = 0, character = 7 },
-            ["end"] = { line = 2, character = 11 },
+            ["end"] = { line = 2, character = 12 },
           },
           text = "1')\nprint('2')\nprint('3",
         },
@@ -210,21 +210,21 @@ describe("did_change tests", function()
         [1] = {
           range = {
             start = { line = 0, character = 7 },
-            ["end"] = { line = 0, character = 9 },
+            ["end"] = { line = 0, character = 10 },
           },
           text = "1",
         },
         [2] = {
           range = {
             start = { line = 1, character = 7 },
-            ["end"] = { line = 1, character = 9 },
+            ["end"] = { line = 1, character = 10 },
           },
           text = "2",
         },
         [3] = {
           range = {
             start = { line = 2, character = 7 },
-            ["end"] = { line = 2, character = 11 },
+            ["end"] = { line = 2, character = 12 },
           },
           text = "3",
         },
